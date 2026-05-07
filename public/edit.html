@@ -19,7 +19,7 @@
     <div class="zoomTool">
         <button id="zoomInBtn">＋</button>
         <button id="zoomOutBtn">－</button>
-        <button id="zoomResetBtn">リセット</button>
+        <button id="zoomResetBtn">100%表示</button>
     </div>
 
     <button id="undoBtn">ひとつ戻る</button>
@@ -41,22 +41,11 @@
     <div class="right-panel">
 
         <!-- ツール -->
-        <div class="fold-header">
-            <span>ツール</span><span class="fold-icon">▼</span>
-        </div>
-        <div class="fold-content">
+<div class="markerNameWrapper">
+    <label for="markerName">砦の名前</label>
+    <input id="markerName" type="text" placeholder="砦の名前">
+</div>
 
-            <div class="markerNameWrapper">
-                <label for="markerName">マーカー名</label>
-                <input id="markerName" type="text" placeholder="マーカー名">
-            </div>
-
-            <button id="markerModeBtn">砦マーカー</button>
-            <button id="arrowModeBtn">矢印</button>
-            <button id="penModeBtn">ペン</button>
-            <button id="addTextModeBtn">テキスト</button>
-            <button id="panModeBtn">移動</button>
-        </div>
 
         <!-- 砦マーカー設定 -->
         <div class="fold-header">
