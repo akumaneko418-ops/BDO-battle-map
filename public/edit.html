@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>画像編集</title>
-
-    <!-- style.css は存在しないので削除済み -->
     <link rel="stylesheet" href="/edit.css">
 </head>
 <body>
@@ -18,76 +16,51 @@
     <!-- 下段：左右2分割 -->
     <div class="main-area">
 
-        <!-- 左：メインキャンバス（画像＋マーカー）-->
+        <!-- 左：メインキャンバス -->
         <div class="canvas-area">
             <canvas id="mapCanvas" width="800" height="600"></canvas>
         </div>
 
-        <!-- 右：ツールバー + コメント欄 -->
+        <!-- 右：ツールバー + コメント一覧 -->
         <div class="right-panel">
 
-            <!-- ツールバー -->
+            <!-- マーカー設定 -->
             <div class="toolbar">
                 <h3>マーカー設定</h3>
 
-                <!-- ？ボタンの位置を左に移動 -->
                 <div class="markerNameInput">
-                    <span>マーカー名？：</span>
+                    <span>マーカー名：</span>
+                    <span class="help-icon" data-help="マーカーの中に表示される名前です（例：A/B/C/D）">?</span>
                     <input id="markerName" placeholder="例：A/B/C/D">
                 </div>
 
-                <!-- 色選択（？ボタン位置修正） -->
                 <div class="colorPicker">
-                    <span>色？：</span>
+                    <span>色：</span>
+                    <span class="help-icon" data-help="マーカーの色を選びます">?</span>
                     <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
                     <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
                     <div id="yellow" class="colorOption" style="background:#fff47e"></div>
                 </div>
 
-                <!-- 保存：と一覧：は完全削除済み -->
-            </div>
+                <!-- テキスト追加 -->
+                <h3>テキスト追加</h3>
 
-            <!-- コメント欄 -->
-            <div class="comment-area">
-                <h3>コメント</h3>
-                <input id="nickname" placeholder="ニックネーム">
-                <input id="message" placeholder="コメント">
-                <button id="sendBtn">送信</button>
-            </div>
+                <div class="textColorPicker">
+                    <span>色：</span>
+                    <span class="help-icon" data-help="テキストの色を選びます">?</span>
+                    <div id="textWhite" class="textColorOption" style="background:#ffffff"></div>
+                    <div id="textBlack" class="textColorOption" style="background:#000000"></div>
+                    <div id="textYellow" class="textColorOption" style="background:#ffff66"></div>
+                </div>
 
-        </div>
-    </div>
+                <div class="textSizePicker">
+                    <span>文字サイズ：</span>
+                    <span class="help-icon" data-help="テキストの大きさを選びます">?</span>
+                    <select id="textSize">
+                        <option value="16">16px</option>
+                        <option value="20">20px</option>
+                        <option value="24">24px</option>
+                        <option value="28">28px</option>
+                    </select>
+                </div>
 
-    <div id="tooltip"></div>
-
-    <!-- ? ホバー説明用ツールチップ -->
-    <div id="helpTooltip" class="help-tooltip hidden"></div>
-
-    <!-- マーカー右クリックメニュー -->
-    <div id="markerMenu" class="marker-menu hidden">
-        <div id="addCommentBtn">コメント追加</div>
-        <div id="deleteMarkerBtn">マーカー削除</div>
-    </div>
-
-    <!-- ★ DOM の最後に script を移動（null エラー防止） -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/edit_v2.js"></script>
-
-    <script>
-        document.querySelectorAll(".help-icon").forEach(icon => {
-            icon.addEventListener("mouseenter", (e) => {
-                const tip = document.getElementById("helpTooltip");
-                tip.textContent = icon.dataset.help;
-                tip.style.left = (e.pageX + 10) + "px";
-                tip.style.top = (e.pageY + 10) + "px";
-                tip.classList.remove("hidden");
-            });
-
-            icon.addEventListener("mouseleave", () => {
-                document.getElementById("helpTooltip").classList.add("hidden");
-            });
-        });
-    </script>
-
-</body>
-</html>
