@@ -59,6 +59,26 @@ body {
 }
 
 /* ============================
+   Undo / Redo
+============================ */
+.undo-redo-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.undo-redo-row button {
+    flex: 1;
+    padding: 8px;
+    cursor: pointer;
+}
+
+button.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* ============================
    カラー選択
 ============================ */
 .colorPicker,
