@@ -1,4 +1,77 @@
 /* ============================
+   全体レイアウト
+   ============================ */
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+.main-area {
+  display: flex;
+  height: calc(100vh - 60px);
+}
+
+/* 左側キャンバス */
+.canvas-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f0f0f0;
+}
+
+/* 右側パネル */
+.right-panel {
+  width: 300px;
+  background: #fff;
+  border-left: 1px solid #ccc;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ツールバー */
+.toolbar h3 {
+  margin-top: 0;
+}
+
+.markerNameInput,
+.colorPicker,
+.saveHelp,
+.backHelp {
+  margin-bottom: 10px;
+}
+
+/* 色ボタン */
+.colorPicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.colorOption {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #333;
+}
+
+/* コメント欄 */
+.comment-area h3 {
+  margin-top: 0;
+}
+
+.comment-area input {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* ============================
    マーカー右クリックメニュー
    ============================ */
 
@@ -63,3 +136,4 @@
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   pointer-events: none;
 }
+
