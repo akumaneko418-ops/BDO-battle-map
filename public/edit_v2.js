@@ -12,40 +12,18 @@ const ctx = canvas.getContext("2d");
 /* ============================================================
    データ構造
 ============================================================ */
-let markers = [];        // 砦マーカー
-let arrows = [];         // 矢印スタンプ
-let texts = [];          // テキスト
-let penPaths = [];       // ペンツールの線
-let markerComments = {}; // コメント
+let markers = [];
+let arrows = [];
+let texts = [];
+let penPaths = [];
+let markerComments = {};
 
 /* ============================================================
-   Undo / Redo 用履歴
+   Undo / Redo
 ============================================================ */
 let history = [];
 let redoHistory = [];
 
-/* ============================================================
-   現在の選択状態
-============================================================ */
-let currentMarkerColor = "#ff7eb9";
-let currentMarkerOpacity = 1.0;
-
-let currentArrowColor = "#ff7eb9";
-let currentArrowOpacity = 1.0;
-
-let currentTextColor = "#ff7eb9";
-let currentTextSize = 16;
-
-let penMode = false;
-let currentPenColor = "#ff7eb9";
-let currentPenWidth = 3;
-let currentPenOpacity = 1.0;
-
-let textAddMode = false;
-
-/* ============================================================
-   履歴管理
-============================================================ */
 function getCurrentState() {
     return {
         markers: JSON.parse(JSON.stringify(markers)),
@@ -68,7 +46,6 @@ function restoreState(state) {
 function saveHistory() {
     history.push(JSON.stringify(getCurrentState()));
     if (history.length > 100) history.shift();
-    // Undo したあとに新しい操作が入ったら Redo は無効になる
     redoHistory = [];
     updateUndoRedoButtons();
 }
@@ -80,8 +57,7 @@ function undo() {
     redoHistory.push(current);
 
     const last = history.pop();
-    const state = JSON.parse(last);
-    restoreState(state);
+    restoreState(JSON.parse(last));
 
     updateUndoRedoButtons();
 }
@@ -93,21 +69,100 @@ function redo() {
     history.push(current);
 
     const next = redoHistory.pop();
-    const state = JSON.parse(next);
-    restoreState(state);
+    restoreState(JSON.parse(next));
 
     updateUndoRedoButtons();
 }
 
 function updateUndoRedoButtons() {
-    const undoBtn = document.getElementById("undoBtn");
-    const redoBtn = document.getElementById("redoBtn");
-
-    if (!undoBtn || !redoBtn) return;
-
-    undoBtn.classList.toggle("disabled", history.length === 0);
-    redoBtn.classList.toggle("disabled", redoHistory.length === 0);
+    document.getElementById("undoBtn").classList.toggle("disabled", history.length === 0);
+    document.getElementById("redoBtn").classList.toggle("disabled", redoHistory.length === 0);
 }
+
+/* ============================================================
+   現在の選択状態
+============================================================ */
+let currentMarkerColor = "#ff7eb9";
+let currentMarkerOpacity = 1.0;
+
+let currentArrowColor = "#ff7eb9";
+let currentArrowOpacity = 1.0;
+
+let currentTextColor = "#ff7eb9";
+let currentTextSize = 16;
+
+let penMode = false;
+let currentPenColor = "#ff7eb9";
+let currentPenWidth = 3;
+let currentPenOpacity = 1.0;
+
+let textAddMode = false;
+
+/* ============================================================
+   テキスト入力（B方式）
+============================================================ */
+let typing = false;
+let typingText = "";
+let typingX = 0;
+let typingY = 0;
+
+document.getElementById("addTextModeBtn").onclick = () => {
+    textAddMode = !textAddMode;
+    penMode = false;
+};
+
+/* キャンバスクリックでカーソルを出す */
+canvas.addEventListener("click", (e) => {
+    if (!textAddMode) return;
+
+    const rect = canvas.getBoundingClientRect();
+    typingX = (e.clientX - rect.left) / zoom;
+    typingY = (e.clientY - rect.top) / zoom;
+
+    typing = true;
+    typingText = "";
+
+    drawCanvas();
+});
+
+/* キー入力 */
+document.addEventListener("keydown", (e) => {
+    if (!typing) return;
+
+    if (e.key === "Enter") {
+        saveHistory();
+        texts.push({
+            id: "text_" + Date.now(),
+            text: typingText,
+            x: typingX,
+            y: typingY,
+            color: currentTextColor,
+            size: currentTextSize
+        });
+
+        typing = false;
+        textAddMode = false;
+        typingText = "";
+        drawCanvas();
+        return;
+    }
+
+    if (e.key === "Escape") {
+        typing = false;
+        textAddMode = false;
+        typingText = "";
+        drawCanvas();
+        return;
+    }
+
+    if (e.key === "Backspace") {
+        typingText = typingText.slice(0, -1);
+    } else if (e.key.length === 1) {
+        typingText += e.key;
+    }
+
+    drawCanvas();
+});
 
 /* ============================================================
    UI：砦マーカー
@@ -142,7 +197,7 @@ document.getElementById("arrowOpacity").oninput = (e) => {
 };
 
 /* ============================================================
-   UI：テキスト
+   UI：テキスト色・サイズ
 ============================================================ */
 document.querySelectorAll(".textColorOption").forEach(opt => {
     opt.onclick = () => {
@@ -156,13 +211,8 @@ document.getElementById("textSize").onchange = (e) => {
     currentTextSize = parseInt(e.target.value);
 };
 
-document.getElementById("addTextModeBtn").onclick = () => {
-    textAddMode = true;
-    penMode = false;
-};
-
 /* ============================================================
-   UI：ペンツール
+   ペンツール
 ============================================================ */
 document.querySelectorAll(".penColorOption").forEach(opt => {
     opt.onclick = () => {
@@ -194,87 +244,7 @@ document.getElementById("penClearBtn").onclick = () => {
 };
 
 /* ============================================================
-   ズーム
-============================================================ */
-document.getElementById("zoomInBtn").onclick = () => {
-    saveHistory();
-    zoom += zoomStep;
-    drawCanvas();
-};
-
-document.getElementById("zoomOutBtn").onclick = () => {
-    saveHistory();
-    zoom = Math.max(0.2, zoom - zoomStep);
-    drawCanvas();
-};
-
-document.getElementById("zoomResetBtn").onclick = () => {
-    saveHistory();
-    zoom = 1.0;
-    drawCanvas();
-};
-
-/* ============================================================
-   Undo / Redo ボタン
-============================================================ */
-document.getElementById("undoBtn").onclick = () => {
-    undo();
-};
-
-document.getElementById("redoBtn").onclick = () => {
-    redo();
-};
-
-/* ============================================================
-   キャンバスクリック
-============================================================ */
-canvas.addEventListener("click", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / zoom;
-    const y = (e.clientY - rect.top) / zoom;
-
-    /* ---- テキスト追加 ---- */
-    if (textAddMode) {
-        const text = document.getElementById("textInput").value.trim();
-        if (!text) return;
-
-        saveHistory();
-        texts.push({
-            id: "text_" + Date.now(),
-            text,
-            x,
-            y,
-            color: currentTextColor,
-            size: currentTextSize
-        });
-
-        textAddMode = false;
-        drawCanvas();
-        return;
-    }
-
-    /* ---- ペンツール ---- */
-    if (penMode) return;
-
-    /* ---- 砦マーカー追加 ---- */
-    const name = document.getElementById("markerName").value.trim();
-    if (name) {
-        saveHistory();
-        markers.push({
-            id: "marker_" + Date.now(),
-            name,
-            x,
-            y,
-            color: currentMarkerColor,
-            opacity: currentMarkerOpacity
-        });
-        drawCanvas();
-        return;
-    }
-});
-
-/* ============================================================
-   ペンツール描画
+   ペン描画
 ============================================================ */
 let drawing = false;
 
@@ -312,7 +282,28 @@ canvas.addEventListener("mouseup", () => {
 });
 
 /* ============================================================
-   右クリックメニュー
+   ズーム
+============================================================ */
+document.getElementById("zoomInBtn").onclick = () => {
+    saveHistory();
+    zoom += zoomStep;
+    drawCanvas();
+};
+
+document.getElementById("zoomOutBtn").onclick = () => {
+    saveHistory();
+    zoom = Math.max(0.2, zoom - zoomStep);
+    drawCanvas();
+};
+
+document.getElementById("zoomResetBtn").onclick = () => {
+    saveHistory();
+    zoom = 1.0;
+    drawCanvas();
+};
+
+/* ============================================================
+   右クリックメニュー（テキスト・砦・矢印）
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -350,7 +341,7 @@ canvas.addEventListener("contextmenu", (e) => {
         }
     }
 
-    /* ---- 矢印スタンプ判定 ---- */
+    /* ---- 矢印判定 ---- */
     for (let a of arrows) {
         const dx = x - a.x;
         const dy = y - a.y;
@@ -363,38 +354,6 @@ canvas.addEventListener("contextmenu", (e) => {
             return;
         }
     }
-});
-
-/* ============================================================
-   コメント
-============================================================ */
-document.getElementById("addCommentBtn").onclick = () => {
-    const id = document.getElementById("markerMenu").dataset.markerId;
-    const text = prompt("コメントを入力");
-    if (!text) return;
-
-    socket.emit("addComment", {
-        markerId: id,
-        text
-    });
-
-    document.getElementById("markerMenu").classList.add("hidden");
-};
-
-socket.on("commentAdded", data => {
-    const { markerId, markerName, markerColor, text } = data;
-
-    const list = document.getElementById("commentList");
-
-    const item = document.createElement("div");
-    item.className = "commentItem";
-    item.dataset.markerId = markerId;
-
-    item.innerHTML = `
-        <span style="color:${markerColor}">${markerName}</span>：${text}
-    `;
-
-    list.appendChild(item);
 });
 
 /* ============================================================
@@ -417,9 +376,6 @@ document.getElementById("editTextBtn").onclick = () => {
 
 document.getElementById("deleteTextBtn").onclick = () => {
     const id = document.getElementById("textMenu").dataset.textId;
-    const target = texts.find(t => t.id === id);
-    if (!target) return;
-
     saveHistory();
     texts = texts.filter(t => t.id !== id);
     drawCanvas();
@@ -427,7 +383,7 @@ document.getElementById("deleteTextBtn").onclick = () => {
 };
 
 /* ============================================================
-   矢印スタンプ操作
+   矢印操作
 ============================================================ */
 document.getElementById("arrowRotateBtn").onclick = () => {
     const id = document.getElementById("arrowMenu").dataset.arrowId;
@@ -435,7 +391,7 @@ document.getElementById("arrowRotateBtn").onclick = () => {
     if (!a) return;
 
     saveHistory();
-    a.angle += Math.PI / 6; // 30°
+    a.angle += Math.PI / 6;
     drawCanvas();
 
     document.getElementById("arrowMenu").classList.add("hidden");
@@ -467,9 +423,6 @@ document.getElementById("arrowScaleDownBtn").onclick = () => {
 
 document.getElementById("arrowDeleteBtn").onclick = () => {
     const id = document.getElementById("arrowMenu").dataset.arrowId;
-    const target = arrows.find(a => a.id === id);
-    if (!target) return;
-
     saveHistory();
     arrows = arrows.filter(a => a.id !== id);
     drawCanvas();
@@ -485,7 +438,7 @@ function drawCanvas() {
     ctx.save();
     ctx.scale(zoom, zoom);
 
-    /* ---- ペンツール ---- */
+    /* ---- ペン ---- */
     penPaths.forEach(path => {
         ctx.save();
         ctx.strokeStyle = path.color;
@@ -514,13 +467,13 @@ function drawCanvas() {
         ctx.fill();
 
         ctx.fillStyle = "#000";
-        ctx.font = "14px sans-serif";
+        ctx.font = `700 14px "Noto Sans JP", "Yu Gothic", sans-serif`;
         ctx.fillText(m.name, m.x + 12, m.y + 4);
 
         ctx.restore();
     });
 
-    /* ---- 矢印スタンプ ---- */
+    /* ---- 矢印 ---- */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -544,7 +497,7 @@ function drawCanvas() {
     texts.forEach(t => {
         ctx.save();
 
-        ctx.font = `${t.size}px sans-serif`;
+        ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
         ctx.fillStyle = t.color;
 
         ctx.shadowColor = "rgba(255,255,255,0.8)";
@@ -557,16 +510,36 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* ---- 入力中テキスト（カーソル付き） ---- */
+    if (typing) {
+        ctx.save();
+
+        ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = currentTextColor;
+
+        ctx.fillText(typingText, typingX, typingY);
+
+        /* カーソル */
+        const width = ctx.measureText(typingText).width;
+        const cursorX = typingX + width + 2;
+
+        ctx.beginPath();
+        ctx.moveTo(cursorX, typingY - currentTextSize);
+        ctx.lineTo(cursorX, typingY + 4);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = currentTextColor;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
     ctx.restore();
 }
 
 /* ============================================================
    画像ドラッグ＆ドロップ
 ============================================================ */
-document.body.addEventListener("dragover", (e) => {
-    e.preventDefault();
-});
-
+document.body.addEventListener("dragover", (e) => e.preventDefault());
 document.body.addEventListener("drop", (e) => {
     e.preventDefault();
 
@@ -582,6 +555,7 @@ document.body.addEventListener("drop", (e) => {
             canvas.height = img.height;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            document.getElementById("dropHint").style.display = "none";
             drawCanvas();
         };
         img.src = reader.result;
@@ -599,6 +573,6 @@ document.addEventListener("click", () => {
 });
 
 /* ============================================================
-   初期状態のボタン更新
+   初期状態
 ============================================================ */
 updateUndoRedoButtons();
