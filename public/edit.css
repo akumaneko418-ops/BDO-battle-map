@@ -43,6 +43,16 @@ body {
     cursor: pointer;
 }
 
+/* ファイル名入力欄（タイトル級の存在感） */
+.fileNameInput {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 6px 10px;
+    width: 260px;
+    border: 2px solid #666;
+    border-radius: 4px;
+}
+
 #saveAllBtn {
     margin-left: auto;
     background: #0052CC;
