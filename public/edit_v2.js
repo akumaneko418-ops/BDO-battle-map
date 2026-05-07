@@ -449,13 +449,17 @@ canvas.addEventListener("mousedown", (e) => {
         return;
     }
 
-    // パン開始
-    if (currentTool === "pan") {
-        isPanning = true;
-        panStartX = e.clientX - offsetX;
-        panStartY = e.clientY - offsetY;
-        return;
-    }
+// パン開始
+if (currentTool === "pan") {
+    isPanning = true;
+    panStartX = e.clientX - offsetX;
+    panStartY = e.clientY - offsetY;
+    return;   // ★★★ これが絶対に必要 ★★★
+}
+
+// ★★★ どのツールにも該当しなかった場合も return ★★★
+return;
+
 });
 
 canvas.addEventListener("mousemove", (e) => {
