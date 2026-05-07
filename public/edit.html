@@ -13,7 +13,17 @@
 
 <div class="canvas-toolbar">
     <input class="fileNameInput" type="text" id="fileNameInput" placeholder="ファイル名（例：拠点戦_〇〇）」>
-    <button id="saveAllBtn">全保存</button>
+
+    <div class="zoomTool">
+        <button id="zoomInBtn">＋</button>
+        <button id="zoomOutBtn">－</button>
+        <button id="zoomResetBtn">リセット</button>
+    </div>
+
+    <button id="undoBtn">ひとつ戻る</button>
+    <button id="redoBtn">ひとつ進む</button>
+
+    <button id="saveAllBtn" class="saveButton">全保存</button>
 </div>
 
 <div class="main-container">
@@ -38,30 +48,18 @@
                 <input id="markerName" type="text" placeholder="マーカー名">
             </div>
 
-            <button id="markerModeBtn">マーカー</button>
+            <button id="markerModeBtn">砦マーカー</button>
             <button id="arrowModeBtn">矢印</button>
             <button id="penModeBtn">ペン</button>
             <button id="addTextModeBtn">テキスト</button>
             <button id="panModeBtn">移動</button>
-
-            <div class="undo-redo-row">
-                <button id="undoBtn">Undo</button>
-                <button id="redoBtn">Redo</button>
-            </div>
-
-            <button id="exportPngBtn">PNG 出力</button>
-
-            <h3>ズーム</h3>
-            <div class="zoomTool">
-                <button id="zoomInBtn">＋</button>
-                <button id="zoomOutBtn">－</button>
-                <button id="zoomResetBtn">リセット</button>
-            </div>
         </div>
 
-        <!-- マーカー設定 -->
+        <!-- 砦マーカー設定 -->
         <div class="fold-header">
-            <span>マーカー設定</span><span class="fold-icon">▼</span>
+            <span>砦マーカー？</span>
+            <span class="fold-icon">▼</span>
+            <div class="tooltip">砦位置をマーキングする</div>
         </div>
         <div class="fold-content">
 
@@ -163,6 +161,7 @@
 
 <!-- 右クリックメニュー -->
 <div id="markerMenu" class="contextMenu hidden">
+    <div id="addCommentBtn">コメント追加</div>
     <div id="deleteMarkerBtn">削除</div>
 </div>
 
