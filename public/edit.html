@@ -1,307 +1,197 @@
-const socket = io();
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>BDO Battle Map Editor</title>
+    <link rel="stylesheet" href="edit.css">
+</head>
+<body>
 
-let markers = [];
-let texts = [];
-let markerComments = {};
+<div class="top-bar">
+    <h2>BDO Battle Map Editor</h2>
+</div>
 
-let currentMarkerId = null;
-let currentTextColor = "#000000";
-let currentTextSize = 16;
-let textAddMode = false;
+<div class="main-container">
 
-let zoom = 1.0;
-let zoomStep = 0.1;
+    <!-- 左側：キャンバス -->
+    <div class="canvas-area">
+        <canvas id="mapCanvas" width="1600" height="900"></canvas>
+    </div>
 
-const canvas = document.getElementById("mapCanvas");
-const ctx = canvas.getContext("2d");
+    <!-- 右側：ツールパネル -->
+    <div class="right-panel">
 
-/* ============================
-   マーカー色選択
-   ============================ */
-document.querySelectorAll(".colorOption").forEach(opt => {
-    opt.onclick = () => {
-        document.querySelectorAll(".colorOption").forEach(o => o.classList.remove("selected"));
-        opt.classList.add("selected");
-    };
-});
+        <!-- 操作（Undo / Redo） -->
+        <h3>操作</h3>
+        <div class="undo-redo-row">
+            <button id="undoBtn" class="disabled">ひとつ戻す</button>
+            <button id="redoBtn" class="disabled">やり直す</button>
+        </div>
 
-/* ============================
-   テキスト色選択（黒・赤・青）
-   ============================ */
-document.querySelectorAll(".textColorOption").forEach(opt => {
-    opt.onclick = () => {
-        currentTextColor = opt.style.background;
-        document.querySelectorAll(".textColorOption").forEach(o => o.classList.remove("selected"));
-        opt.classList.add("selected");
-    };
-});
+        <!-- ズーム -->
+        <h3>画面の拡大/縮小</h3>
+        <div class="zoomTool">
+            <button id="zoomInBtn">＋</button>
+            <button id="zoomOutBtn">－</button>
+            <button id="zoomResetBtn">100%</button>
+        </div>
 
-/* ============================
-   テキストサイズ選択
-   ============================ */
-document.getElementById("textSize").onchange = (e) => {
-    currentTextSize = parseInt(e.target.value);
-};
+        <hr>
 
-/* ============================
-   テキスト追加モード
-   ============================ */
-document.getElementById("addTextModeBtn").onclick = () => {
-    textAddMode = true;
-};
+        <!-- 砦マーカー -->
+        <h3>砦マーカー</h3>
+        <div class="markerNameInput">
+            <span>砦マーカー</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">マップ上に配置する砦マーカーの名前です。</div>
+            <input id="markerName" placeholder="例：A / B / C">
+        </div>
 
-/* ============================
-   ズームボタン
-   ============================ */
-document.getElementById("zoomInBtn").onclick = () => {
-    zoom += zoomStep;
-    drawCanvas();
-};
+        <div class="colorPicker">
+            <span>色</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">砦マーカーの色を選択します。</div>
 
-document.getElementById("zoomOutBtn").onclick = () => {
-    zoom = Math.max(0.2, zoom - zoomStep);
-    drawCanvas();
-};
+            <div class="colorOption" style="background:#ff7eb9"></div>
+            <div class="colorOption" style="background:#7ed6ff"></div>
+            <div class="colorOption" style="background:#fff47e"></div>
+        </div>
 
-document.getElementById("zoomResetBtn").onclick = () => {
-    zoom = 1.0;
-    drawCanvas();
-};
+        <div class="opacityPicker">
+            <span>透明度</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">砦マーカーの透明度を調整します。</div>
 
-/* ============================
-   キャンバス左クリック
-   ============================ */
-canvas.addEventListener("click", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / zoom;
-    const y = (e.clientY - rect.top) / zoom;
+            <input type="range" id="markerOpacity" min="0" max="1" step="0.01" value="1">
+            <span id="markerOpacityValue">1.00</span>
+        </div>
 
-    /* ---- テキスト追加モード ---- */
-    if (textAddMode) {
-        const text = document.getElementById("textInput").value.trim();
-        if (!text) return;
+        <hr>
 
-        const id = "text_" + Date.now();
+        <!-- 矢印スタンプ -->
+        <h3>矢印スタンプ</h3>
 
-        texts.push({
-            id,
-            text,
-            x,
-            y,
-            color: currentTextColor,
-            size: currentTextSize,
-            highlight: false
-        });
+        <div class="arrowColorPicker">
+            <span>色</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">矢印スタンプの色を選択します。</div>
 
-        textAddMode = false;
-        drawCanvas();
-        return;
-    }
+            <div class="arrowColorOption" style="background:#ff7eb9"></div>
+            <div class="arrowColorOption" style="background:#7ed6ff"></div>
+            <div class="arrowColorOption" style="background:#fff47e"></div>
+        </div>
 
-    /* ---- マーカー追加 ---- */
-    const name = document.getElementById("markerName").value.trim();
-    if (!name) return;
+        <div class="arrowOpacityPicker">
+            <span>透明度</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">矢印スタンプの透明度を調整します。</div>
 
-    const selectedColor = document.querySelector(".colorOption.selected");
-    if (!selectedColor) return;
+            <input type="range" id="arrowOpacity" min="0" max="1" step="0.01" value="1">
+            <span id="arrowOpacityValue">1.00</span>
+        </div>
 
-    const color = selectedColor.style.background;
+        <hr>
 
-    const id = "marker_" + Date.now();
+        <!-- テキスト -->
+        <h3>テキスト</h3>
 
-    markers.push({
-        id,
-        name,
-        x,
-        y,
-        color,
-        highlight: false
-    });
+        <div class="textColorPicker">
+            <span>テキスト色</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">テキストの色を選択します。</div>
 
-    drawCanvas();
-});
+            <div class="textColorOption" style="background:#ff7eb9"></div>
+            <div class="textColorOption" style="background:#7ed6ff"></div>
+            <div class="textColorOption" style="background:#fff47e"></div>
+        </div>
 
-/* ============================
-   右クリックメニュー（マーカー & テキスト）
-   ============================ */
-canvas.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
+        <div class="textSizePicker">
+            <span>文字サイズ</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">テキストの大きさを選択します。</div>
 
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / zoom;
-    const y = (e.clientY - rect.top) / zoom;
+            <select id="textSize">
+                <option value="16">16px</option>
+                <option value="20">20px</option>
+                <option value="24">24px</option>
+                <option value="28">28px</option>
+            </select>
+        </div>
 
-    /* ---- テキスト判定 ---- */
-    for (let t of texts) {
-        const width = t.text.length * (t.size * 0.6);
-        const height = t.size;
+        <input id="textInput" placeholder="テキストを入力">
+        <button id="addTextModeBtn">テキスト追加モード</button>
 
-        if (x >= t.x && x <= t.x + width && y >= t.y - height && y <= t.y) {
-            const menu = document.getElementById("textMenu");
-            menu.style.left = e.pageX + "px";
-            menu.style.top = e.pageY + "px";
-            menu.dataset.textId = t.id;
-            menu.classList.remove("hidden");
-            return;
-        }
-    }
+        <hr>
 
-    /* ---- マーカー判定 ---- */
-    for (let m of markers) {
-        const dx = x - m.x;
-        const dy = y - m.y;
-        if (dx * dx + dy * dy <= 100) {
-            const menu = document.getElementById("markerMenu");
-            menu.style.left = e.pageX + "px";
-            menu.style.top = e.pageY + "px";
-            menu.dataset.markerId = m.id;
-            menu.classList.remove("hidden");
-            return;
-        }
-    }
-});
+        <!-- ペンツール -->
+        <h3>ペンツール</h3>
 
-/* ============================
-   マーカー → コメント追加
-   ============================ */
-document.getElementById("addCommentBtn").onclick = () => {
-    const id = document.getElementById("markerMenu").dataset.markerId;
-    currentMarkerId = id;
+        <div class="penColorPicker">
+            <span>色</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">ペンの色を選択します。</div>
 
-    const text = prompt("コメントを入力");
-    if (!text) return;
+            <div class="penColorOption" style="background:#ff7eb9"></div>
+            <div class="penColorOption" style="background:#7ed6ff"></div>
+            <div class="penColorOption" style="background:#fff47e"></div>
+        </div>
 
-    socket.emit("addComment", {
-        markerId: id,
-        text
-    });
+        <div class="penWidthPicker">
+            <span>太さ</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">ペンの太さを選択します。</div>
 
-    document.getElementById("markerMenu").classList.add("hidden");
-};
+            <select id="penWidth">
+                <option value="1">1px</option>
+                <option value="3">3px</option>
+                <option value="5">5px</option>
+                <option value="8">8px</option>
+            </select>
+        </div>
 
-/* ============================
-   マーカー削除
-   ============================ */
-document.getElementById("deleteMarkerBtn").onclick = () => {
-    const id = document.getElementById("markerMenu").dataset.markerId;
-    markers = markers.filter(m => m.id !== id);
-    delete markerComments[id];
-    drawCanvas();
-    document.getElementById("markerMenu").classList.add("hidden");
-};
+        <div class="penOpacityPicker">
+            <span>透明度</span>
+            <span class="help-icon">?</span>
+            <div class="help-popup">ペンの透明度を調整します。</div>
 
-/* ============================
-   テキスト編集
-   ============================ */
-document.getElementById("editTextBtn").onclick = () => {
-    const id = document.getElementById("textMenu").dataset.textId;
-    const t = texts.find(x => x.id === id);
-    if (!t) return;
+            <input type="range" id="penOpacity" min="0" max="1" step="0.01" value="1">
+            <span id="penOpacityValue">1.00</span>
+        </div>
 
-    const newText = prompt("テキストを編集", t.text);
-    if (newText !== null) {
-        t.text = newText;
-        drawCanvas();
-    }
+        <button id="penModeBtn">ペン ON/OFF</button>
+        <button id="penClearBtn">線を消す</button>
 
-    document.getElementById("textMenu").classList.add("hidden");
-};
+        <hr>
 
-/* ============================
-   テキスト削除
-   ============================ */
-document.getElementById("deleteTextBtn").onclick = () => {
-    const id = document.getElementById("textMenu").dataset.textId;
-    texts = texts.filter(t => t.id !== id);
-    drawCanvas();
-    document.getElementById("textMenu").classList.add("hidden");
-};
+        <!-- コメント一覧 -->
+        <h3>コメント</h3>
+        <div id="commentList"></div>
 
-/* ============================
-   コメント受信
-   ============================ */
-socket.on("commentAdded", data => {
-    const { markerId, markerName, markerColor, text } = data;
+    </div>
+</div>
 
-    const list = document.getElementById("commentList");
+<!-- マーカー右クリックメニュー -->
+<div id="markerMenu" class="contextMenu hidden">
+    <div id="addCommentBtn">コメント追加</div>
+    <div id="deleteMarkerBtn">削除</div>
+</div>
 
-    const item = document.createElement("div");
-    item.className = "commentItem";
-    item.dataset.markerId = markerId;
+<!-- テキスト右クリックメニュー -->
+<div id="textMenu" class="contextMenu hidden">
+    <div id="editTextBtn">編集</div>
+    <div id="deleteTextBtn">削除</div>
+</div>
 
-    item.innerHTML = `
-        <span class="commentMarkerName" style="color:${markerColor}">
-            ${markerName}
-        </span>
-        ：${text}
-    `;
+<!-- 矢印右クリックメニュー -->
+<div id="arrowMenu" class="contextMenu hidden">
+    <div id="arrowRotateBtn">回転</div>
+    <div id="arrowScaleUpBtn">拡大</div>
+    <div id="arrowScaleDownBtn">縮小</div>
+    <div id="arrowDeleteBtn">削除</div>
+</div>
 
-    list.appendChild(item);
+<script src="/socket.io/socket.io.js"></script>
+<script src="edit_v2.js"></script>
 
-    item.addEventListener("mouseenter", () => highlightMarker(markerId, true));
-    item.addEventListener("mouseleave", () => highlightMarker(markerId, false));
-});
-
-/* ============================
-   マーカー強調
-   ============================ */
-function highlightMarker(id, on) {
-    const m = markers.find(x => x.id === id);
-    if (!m) return;
-    m.highlight = on;
-    drawCanvas();
-}
-
-/* ============================
-   描画
-   ============================ */
-function drawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.scale(zoom, zoom);
-
-    /* ---- マーカー ---- */
-    markers.forEach(m => {
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.highlight ? 14 : 10, 0, Math.PI * 2);
-        ctx.fillStyle = m.color;
-        ctx.fill();
-
-        ctx.fillStyle = "black";
-        ctx.font = "14px sans-serif";
-        ctx.fillText(m.name, m.x + 12, m.y + 4);
-    });
-
-    /* ---- テキスト（Glow + Shadow） ---- */
-    texts.forEach(t => {
-
-        ctx.save();
-
-        const size = t.highlight ? t.size + 4 : t.size;
-        ctx.font = `${size}px sans-serif`;
-        ctx.fillStyle = t.color;
-
-        /* 外側光彩（Outer Glow） */
-        ctx.shadowColor = "rgba(255,255,255,0.8)";
-        ctx.shadowBlur = t.highlight ? 18 : 10;
-
-        /* ドロップシャドウ */
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
-        ctx.fillText(t.text, t.x, t.y);
-
-        ctx.restore();
-    });
-
-    ctx.restore();
-}
-
-/* ============================
-   クリックでメニューを閉じる
-   ============================ */
-document.addEventListener("click", () => {
-    document.getElementById("markerMenu").classList.add("hidden");
-    document.getElementById("textMenu").classList.add("hidden");
-});
+</body>
+</html>
