@@ -18,9 +18,6 @@
     <select id="presetSelect">
         <option value="">プリセット画像を選択</option>
         <option value="/presets/sample_map.png">sample_map.png</option>
-        <!-- ここに追加すればプリセットが増える
-        <option value="/presets/your_map.png">your_map.png</option>
-        -->
     </select>
 
     <button id="undoBtn" class="disabled">ひとつ戻す</button>
@@ -31,6 +28,7 @@
     <button id="zoomResetBtn">100%</button>
 
     <button id="saveAllBtn">全体を保存</button>
+    <button id="exportPngBtn">PNG保存</button>
 </div>
 
 <div class="main-container">
@@ -41,6 +39,14 @@
     </div>
 
     <div class="right-panel">
+
+        <!-- ★★★ 追加したツール切替ボタン ★★★ -->
+        <div class="toolButtons" style="margin-bottom: 10px;">
+            <button id="markerModeBtn">マーカー追加</button>
+            <button id="arrowModeBtn">矢印追加</button>
+            <button id="panModeBtn">移動</button>
+        </div>
+        <!-- ★★★ ここまで追加 ★★★ -->
 
         <h3 class="fold-header" data-target="markerSection">
             砦マーカー <span class="fold-icon">▲</span>
