@@ -9,6 +9,8 @@ let zoomStep = 0.1;
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
 
+let backgroundImage = null;
+
 /* ============================================================
    データ構造
 ============================================================ */
@@ -30,7 +32,8 @@ function getCurrentState() {
         arrows: JSON.parse(JSON.stringify(arrows)),
         texts: JSON.parse(JSON.stringify(texts)),
         penPaths: JSON.parse(JSON.stringify(penPaths)),
-        zoom
+        zoom,
+        backgroundImageSrc: backgroundImage ? backgroundImage.src : null
     };
 }
 
@@ -40,7 +43,18 @@ function restoreState(state) {
     texts = state.texts;
     penPaths = state.penPaths;
     zoom = state.zoom;
-    drawCanvas();
+
+    if (state.backgroundImageSrc) {
+        const img = new Image();
+        img.onload = () => {
+            backgroundImage = img;
+            drawCanvas();
+        };
+        img.src = state.backgroundImageSrc;
+    } else {
+        backgroundImage = null;
+        drawCanvas();
+    }
 }
 
 function saveHistory() {
@@ -111,7 +125,6 @@ document.getElementById("addTextModeBtn").onclick = () => {
     penMode = false;
 };
 
-/* キャンバスクリックでカーソルを出す */
 canvas.addEventListener("click", (e) => {
     if (!textAddMode) return;
 
@@ -125,7 +138,6 @@ canvas.addEventListener("click", (e) => {
     drawCanvas();
 });
 
-/* キー入力 */
 document.addEventListener("keydown", (e) => {
     if (!typing) return;
 
@@ -303,6 +315,24 @@ document.getElementById("zoomResetBtn").onclick = () => {
 };
 
 /* ============================================================
+   help-popup（右パネル外に出す）
+============================================================ */
+document.querySelectorAll(".help-icon").forEach(icon => {
+    const popup = icon.nextElementSibling;
+
+    icon.addEventListener("mouseenter", () => {
+        const rect = icon.getBoundingClientRect();
+        popup.style.left = (rect.right + 10) + "px";
+        popup.style.top = rect.top + "px";
+        popup.style.display = "block";
+    });
+
+    icon.addEventListener("mouseleave", () => {
+        popup.style.display = "none";
+    });
+});
+
+/* ============================================================
    右クリックメニュー（テキスト・砦・矢印）
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
@@ -438,6 +468,11 @@ function drawCanvas() {
     ctx.save();
     ctx.scale(zoom, zoom);
 
+    /* ---- 背景画像 ---- */
+    if (backgroundImage) {
+        ctx.drawImage(backgroundImage, 0, 0);
+    }
+
     /* ---- ペン ---- */
     penPaths.forEach(path => {
         ctx.save();
@@ -519,7 +554,6 @@ function drawCanvas() {
 
         ctx.fillText(typingText, typingX, typingY);
 
-        /* カーソル */
         const width = ctx.measureText(typingText).width;
         const cursorX = typingX + width + 2;
 
@@ -553,8 +587,9 @@ document.body.addEventListener("drop", (e) => {
             saveHistory();
             canvas.width = img.width;
             canvas.height = img.height;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
+
+            backgroundImage = img;
+
             document.getElementById("dropHint").style.display = "none";
             drawCanvas();
         };
@@ -567,12 +602,3 @@ document.body.addEventListener("drop", (e) => {
    メニュー閉じる
 ============================================================ */
 document.addEventListener("click", () => {
-    document.getElementById("markerMenu").classList.add("hidden");
-    document.getElementById("textMenu").classList.add("hidden");
-    document.getElementById("arrowMenu").classList.add("hidden");
-});
-
-/* ============================================================
-   初期状態
-============================================================ */
-updateUndoRedoButtons();
