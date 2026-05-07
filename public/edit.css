@@ -93,7 +93,7 @@ button.disabled {
 }
 
 /* ============================
-   help-icon（砦マーカー・テキスト追加のみ）
+   help-icon（右パネル外に出す）
 ============================ */
 .help-icon {
     cursor: help;
@@ -104,20 +104,30 @@ button.disabled {
     margin-left: 4px;
 }
 
-.help-popup {
+.global-help {
+    position: fixed !important;
+    z-index: 99999;
     display: none;
-    position: absolute;
     background: #fff;
     border: 1px solid #aaa;
     padding: 6px 10px;
     border-radius: 4px;
     white-space: nowrap;
-    z-index: 9999;
-    margin-top: 4px;
 }
 
-.help-icon:hover + .help-popup {
-    display: block;
+/* help-wrapper は relative にしない */
+.help-wrapper {
+    position: static !important;
+}
+
+/* ============================
+   砦マーカー名入力欄
+============================ */
+.markerNameWrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
 }
 
 /* ============================
@@ -180,14 +190,6 @@ button.disabled {
     margin-bottom: 10px;
 }
 
-#textInput {
-    width: 100%;
-    padding: 6px;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-}
-
-/* テキスト追加ボタンの説明 */
 .textAddButtonWrapper {
     display: flex;
     align-items: center;
