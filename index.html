@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>BDO Battle Map</title>
+  <style>
+    body { font-family: sans-serif; }
+    #chatLog { border: 1px solid #ccc; height: 200px; overflow-y: scroll; padding: 5px; }
+  </style>
+</head>
+<body>
+
+  <h2>コメント</h2>
+
+  <input id="nickname" placeholder="ニックネーム">
+  <input id="chatInput" placeholder="コメントを入力">
+  <button id="sendChat">送信</button>
+
+  <div id="chatLog"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const nicknameInput = document.getElementById("nickname");
+    const chatInput = document.getElementById("chatInput");
+    const sendChat = document.getElementById("sendChat");
+    const chatLog = document.getElementById("chatLog");
+
+    // 過去コメント受信
+    socket.on("pastComments", (comments) => {
+      comments.forEach(addComment);
+    });
+
+    // 新規コメント受信
+    socket.on("chat", (data) => {
+      addComment(data);
+    });
+
+    // コメント送信
+    sendChat.addEventListener("click", () => {
+      const nickname = nicknameInput.value.trim();
+      const message = chatInput.value.trim();
+      if (!nickname || !message) return;
+
+      const data = {
+        nickname,
+        message,
+        timestamp: Date.now()
+      };
+
+      socket.emit("chat", data);
+      chatInput.value = "";
+    });
+
+    function addComment(data) {
+      const div = document.createElement("div");
+      const time = new Date(data.timestamp).toLocaleTimeString();
+      div.textContent = `[${time}] ${data.nickname}: ${data.message}`;
+      chatLog.appendChild(div);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+  </script>
+
+</body>
+</html>
