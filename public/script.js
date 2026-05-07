@@ -7,20 +7,17 @@ let markers = [];
 let markerComments = {};
 let currentMarkerId = null;
 
-// ニックネーム → 色 のキャッシュ
+// ニックネーム → 色
 const nameColors = {};
 
-// ニックネームから色を生成（ハッシュ）
 function getColorForName(name) {
   if (nameColors[name]) return nameColors[name];
 
-  // ハッシュ生成
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
 
-  // ハッシュ → HSL 色変換
   const hue = Math.abs(hash) % 360;
   const color = `hsl(${hue}, 70%, 60%)`;
 
@@ -28,35 +25,64 @@ function getColorForName(name) {
   return color;
 }
 
+// ★ マーカー色選択
+let selectedColor = "#ff7eb9"; // 初期はピンク
+
+document.querySelectorAll(".colorOption").forEach(el => {
+  el.addEventListener("click", () => {
+    document.querySelectorAll(".colorOption").forEach(c => c.classList.remove("selectedColor"));
+    el.classList.add("selectedColor");
+    selectedColor = el.style.background;
+  });
+});
+
+// 初期選択
+document.getElementById("pink").classList.add("selectedColor");
+
 // マーカー描画
 function drawMarkers() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   markers.forEach(m => {
     ctx.beginPath();
-    ctx.arc(m.x, m.y, 8, 0, Math.PI * 2);
-    ctx.fillStyle = "red";
+    ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = m.color;
     ctx.fill();
   });
 }
 
-// マーカー選択
+// ★ キャンバスクリック → マーカー追加
 canvas.addEventListener("click", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
 
-  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 10);
+  // 既存マーカー選択
+  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
   if (marker) {
     currentMarkerId = marker.id;
     console.log("選択中のマーカー:", currentMarkerId);
+    return;
   }
+
+  // 新規マーカー作成
+  const id = "m" + (markers.length + 1);
+
+  markers.push({
+    id,
+    x,
+    y,
+    color: selectedColor
+  });
+
+  currentMarkerId = id;
+  drawMarkers();
 });
 
-// マーカーにホバー → コメント表示
+// ホバーでコメント表示
 canvas.addEventListener("mousemove", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
 
-  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 10);
+  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
   const tooltip = document.getElementById("tooltip");
 
   if (!marker) {
@@ -73,15 +99,24 @@ canvas.addEventListener("mousemove", (e) => {
   tooltip.innerHTML = comments
     .map(c => {
       const color = getColorForName(c.nickname);
-      return `<div style="color:${color}">
-        [${new Date(c.timestamp).toLocaleTimeString()}] 
-        <b>${c.nickname}</b>: ${c.message}
-      </div>`;
+      const canDelete = (c.nickname === document.getElementById("nickname").value);
+
+      return `
+        <div style="color:${color}">
+          [${new Date(c.timestamp).toLocaleTimeString()}] 
+          <b>${c.nickname}</b>: ${c.message}
+          ${canDelete ? `<span class="deleteBtn" onclick="deleteComment('${c._id}')">削除</span>` : ""}
+        </div>
+      `;
     })
     .join("");
 });
 
-// コメント送信
+// コメント削除
+function deleteComment(id) {
+  socket.emit("deleteComment", id);
+}
+
 document.getElementById("sendBtn").addEventListener("click", () => {
   const nickname = document.getElementById("nickname").value;
   const message = document.getElementById("message").value;
@@ -102,23 +137,23 @@ document.getElementById("sendBtn").addEventListener("click", () => {
   document.getElementById("message").value = "";
 });
 
-// 過去コメント受信
 socket.on("pastComments", (grouped) => {
   markerComments = grouped;
 });
 
-// 新規コメント受信
 socket.on("chat", (data) => {
   if (!markerComments[data.markerId]) markerComments[data.markerId] = [];
   markerComments[data.markerId].push(data);
 });
 
-// 初期マーカー
-markers = [
-  { id: "m1", x: 200, y: 300 },
-  { id: "m2", x: 500, y: 400 },
-  { id: "m3", x: 800, y: 200 }
-];
+socket.on("deleteComment", (id) => {
+  for (const key in markerComments) {
+    markerComments[key] = markerComments[key].filter(c => c._id !== id);
+  }
+});
 
+// 初期マーカーなし
+markers = [];
 drawMarkers();
+
 
