@@ -137,6 +137,16 @@ let currentPenOpacity = 1.0;
 let textAddMode = false;
 
 /* ============================================================
+   ペンのクリア
+============================================================ */
+document.getElementById("penClearBtn").onclick = () => {
+    saveHistory();
+    penPaths = [];
+    drawCanvas();
+    broadcastState();
+};
+
+/* ============================================================
    ツール切替（edit.html に完全対応）
 ============================================================ */
 document.getElementById("markerModeBtn").onclick = () => {
