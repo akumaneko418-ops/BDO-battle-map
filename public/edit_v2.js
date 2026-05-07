@@ -19,6 +19,12 @@ let penPaths = [];       // ペンツールの線
 let markerComments = {}; // コメント
 
 /* ============================================================
+   Undo / Redo 用履歴
+============================================================ */
+let history = [];
+let redoHistory = [];
+
+/* ============================================================
    現在の選択状態
 ============================================================ */
 let currentMarkerColor = "#ff7eb9";
@@ -36,6 +42,72 @@ let currentPenWidth = 3;
 let currentPenOpacity = 1.0;
 
 let textAddMode = false;
+
+/* ============================================================
+   履歴管理
+============================================================ */
+function getCurrentState() {
+    return {
+        markers: JSON.parse(JSON.stringify(markers)),
+        arrows: JSON.parse(JSON.stringify(arrows)),
+        texts: JSON.parse(JSON.stringify(texts)),
+        penPaths: JSON.parse(JSON.stringify(penPaths)),
+        zoom
+    };
+}
+
+function restoreState(state) {
+    markers = state.markers;
+    arrows = state.arrows;
+    texts = state.texts;
+    penPaths = state.penPaths;
+    zoom = state.zoom;
+    drawCanvas();
+}
+
+function saveHistory() {
+    history.push(JSON.stringify(getCurrentState()));
+    if (history.length > 100) history.shift();
+    // Undo したあとに新しい操作が入ったら Redo は無効になる
+    redoHistory = [];
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (history.length === 0) return;
+
+    const current = JSON.stringify(getCurrentState());
+    redoHistory.push(current);
+
+    const last = history.pop();
+    const state = JSON.parse(last);
+    restoreState(state);
+
+    updateUndoRedoButtons();
+}
+
+function redo() {
+    if (redoHistory.length === 0) return;
+
+    const current = JSON.stringify(getCurrentState());
+    history.push(current);
+
+    const next = redoHistory.pop();
+    const state = JSON.parse(next);
+    restoreState(state);
+
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById("undoBtn");
+    const redoBtn = document.getElementById("redoBtn");
+
+    if (!undoBtn || !redoBtn) return;
+
+    undoBtn.classList.toggle("disabled", history.length === 0);
+    redoBtn.classList.toggle("disabled", redoHistory.length === 0);
+}
 
 /* ============================================================
    UI：砦マーカー
@@ -115,6 +187,8 @@ document.getElementById("penModeBtn").onclick = () => {
 };
 
 document.getElementById("penClearBtn").onclick = () => {
+    if (penPaths.length === 0) return;
+    saveHistory();
     penPaths = [];
     drawCanvas();
 };
@@ -123,18 +197,32 @@ document.getElementById("penClearBtn").onclick = () => {
    ズーム
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
+    saveHistory();
     zoom += zoomStep;
     drawCanvas();
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
+    saveHistory();
     zoom = Math.max(0.2, zoom - zoomStep);
     drawCanvas();
 };
 
 document.getElementById("zoomResetBtn").onclick = () => {
+    saveHistory();
     zoom = 1.0;
     drawCanvas();
+};
+
+/* ============================================================
+   Undo / Redo ボタン
+============================================================ */
+document.getElementById("undoBtn").onclick = () => {
+    undo();
+};
+
+document.getElementById("redoBtn").onclick = () => {
+    redo();
 };
 
 /* ============================================================
@@ -150,6 +238,7 @@ canvas.addEventListener("click", (e) => {
         const text = document.getElementById("textInput").value.trim();
         if (!text) return;
 
+        saveHistory();
         texts.push({
             id: "text_" + Date.now(),
             text,
@@ -170,6 +259,7 @@ canvas.addEventListener("click", (e) => {
     /* ---- 砦マーカー追加 ---- */
     const name = document.getElementById("markerName").value.trim();
     if (name) {
+        saveHistory();
         markers.push({
             id: "marker_" + Date.now(),
             name,
@@ -197,6 +287,7 @@ canvas.addEventListener("mousedown", (e) => {
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
+    saveHistory();
     penPaths.push({
         points: [{ x, y }],
         color: currentPenColor,
@@ -316,6 +407,7 @@ document.getElementById("editTextBtn").onclick = () => {
 
     const newText = prompt("テキストを編集", t.text);
     if (newText !== null) {
+        saveHistory();
         t.text = newText;
         drawCanvas();
     }
@@ -325,6 +417,10 @@ document.getElementById("editTextBtn").onclick = () => {
 
 document.getElementById("deleteTextBtn").onclick = () => {
     const id = document.getElementById("textMenu").dataset.textId;
+    const target = texts.find(t => t.id === id);
+    if (!target) return;
+
+    saveHistory();
     texts = texts.filter(t => t.id !== id);
     drawCanvas();
     document.getElementById("textMenu").classList.add("hidden");
@@ -338,6 +434,7 @@ document.getElementById("arrowRotateBtn").onclick = () => {
     const a = arrows.find(x => x.id === id);
     if (!a) return;
 
+    saveHistory();
     a.angle += Math.PI / 6; // 30°
     drawCanvas();
 
@@ -349,6 +446,7 @@ document.getElementById("arrowScaleUpBtn").onclick = () => {
     const a = arrows.find(x => x.id === id);
     if (!a) return;
 
+    saveHistory();
     a.scale *= 1.1;
     drawCanvas();
 
@@ -360,6 +458,7 @@ document.getElementById("arrowScaleDownBtn").onclick = () => {
     const a = arrows.find(x => x.id === id);
     if (!a) return;
 
+    saveHistory();
     a.scale *= 0.9;
     drawCanvas();
 
@@ -368,6 +467,10 @@ document.getElementById("arrowScaleDownBtn").onclick = () => {
 
 document.getElementById("arrowDeleteBtn").onclick = () => {
     const id = document.getElementById("arrowMenu").dataset.arrowId;
+    const target = arrows.find(a => a.id === id);
+    if (!target) return;
+
+    saveHistory();
     arrows = arrows.filter(a => a.id !== id);
     drawCanvas();
     document.getElementById("arrowMenu").classList.add("hidden");
@@ -421,9 +524,9 @@ function drawCanvas() {
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
-        ctx.rotate(a.angle);
-        ctx.scale(a.scale, a.scale);
-        ctx.globalAlpha = a.opacity;
+        ctx.rotate(a.angle || 0);
+        ctx.scale(a.scale || 1, a.scale || 1);
+        ctx.globalAlpha = a.opacity || currentArrowOpacity;
 
         ctx.beginPath();
         ctx.moveTo(0, -20);
@@ -431,7 +534,7 @@ function drawCanvas() {
         ctx.lineTo(-15, 20);
         ctx.closePath();
 
-        ctx.fillStyle = a.color;
+        ctx.fillStyle = a.color || currentArrowColor;
         ctx.fill();
 
         ctx.restore();
@@ -474,9 +577,12 @@ document.body.addEventListener("drop", (e) => {
     reader.onload = () => {
         const img = new Image();
         img.onload = () => {
+            saveHistory();
             canvas.width = img.width;
             canvas.height = img.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            drawCanvas();
         };
         img.src = reader.result;
     };
@@ -491,3 +597,8 @@ document.addEventListener("click", () => {
     document.getElementById("textMenu").classList.add("hidden");
     document.getElementById("arrowMenu").classList.add("hidden");
 });
+
+/* ============================================================
+   初期状態のボタン更新
+============================================================ */
+updateUndoRedoButtons();
