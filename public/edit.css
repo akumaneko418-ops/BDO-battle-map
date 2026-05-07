@@ -7,6 +7,13 @@ body {
   font-family: sans-serif;
 }
 
+.top-bar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
 .main-area {
   display: flex;
   height: calc(100vh - 60px);
@@ -32,43 +39,66 @@ body {
   gap: 20px;
 }
 
-/* ツールバー */
+/* ============================
+   ツールバー
+   ============================ */
+
 .toolbar h3 {
   margin-top: 0;
 }
 
 .markerNameInput,
 .colorPicker,
-.saveHelp,
-.backHelp {
+.textColorPicker,
+.textSizePicker {
   margin-bottom: 10px;
 }
 
-/* 色ボタン */
-.colorPicker {
+.colorPicker,
+.textColorPicker {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.colorOption {
+.colorOption,
+.textColorOption {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  cursor: pointer;
+  border-radius: 4px;
   border: 2px solid #333;
+  cursor: pointer;
 }
 
-/* コメント欄 */
+.textSizePicker select {
+  padding: 4px;
+}
+
+.markerGuide {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #555;
+}
+
+/* ============================
+   コメント欄
+   ============================ */
+
 .comment-area h3 {
   margin-top: 0;
 }
 
-.comment-area input {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 6px;
-  box-sizing: border-box;
+#commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.commentItem {
+  font-size: 14px;
+  padding: 4px 0;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
 }
 
 /* ============================
@@ -136,4 +166,3 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   pointer-events: none;
 }
-
