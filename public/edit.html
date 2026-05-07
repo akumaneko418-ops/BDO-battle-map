@@ -7,176 +7,95 @@
 </head>
 <body>
 
-<div class="top-bar">
-    <h2>BDO Battle Map Editor</h2>
-</div>
+<div id="toolbar">
 
-<div class="canvas-toolbar">
+    <!-- マーカー名 -->
+    <input id="markerName" type="text" placeholder="マーカー名" />
 
-    <input id="fileNameInput" value="無題" class="fileNameInput">
+    <!-- ツールボタン -->
+    <button id="markerModeBtn">マーカー</button>
+    <button id="arrowModeBtn">矢印</button>
+    <button id="penModeBtn">ペン</button>
+    <button id="addTextModeBtn">テキスト</button>
+    <button id="panModeBtn">移動</button>
 
-    <select id="presetSelect">
-        <option value="">プリセット画像を選択</option>
-        <option value="/presets/sample_map.png">sample_map.png</option>
-    </select>
+    <!-- Undo / Redo -->
+    <button id="undoBtn">Undo</button>
+    <button id="redoBtn">Redo</button>
 
-    <button id="undoBtn" class="disabled">ひとつ戻す</button>
-    <button id="redoBtn" class="disabled">ひとつ進む</button>
+    <!-- PNG 出力 -->
+    <button id="exportPngBtn">PNG</button>
 
+    <!-- ズーム -->
     <button id="zoomInBtn">＋</button>
     <button id="zoomOutBtn">－</button>
-    <button id="zoomResetBtn">100%</button>
+    <button id="zoomResetBtn">リセット</button>
 
-    <button id="saveAllBtn">全体を保存</button>
-    <button id="exportPngBtn">PNG保存</button>
-</div>
-
-<div class="main-container">
-
-    <div class="canvas-area">
-        <div id="dropHint">ここに画像をドラッグ＆ドロップしてアップロード</div>
-        <canvas id="mapCanvas" width="1600" height="900"></canvas>
+    <!-- 色選択 -->
+    <div class="colorGroup">
+        <div class="colorOption" style="background:#ff7eb9"></div>
+        <div class="colorOption" style="background:#ff65a3"></div>
+        <div class="colorOption" style="background:#7afcff"></div>
+        <div class="colorOption" style="background:#feff9c"></div>
+        <div class="colorOption" style="background:#fff740"></div>
     </div>
 
-    <div class="right-panel">
-
-        <!-- ★★★ 追加したツール切替ボタン ★★★ -->
-        <div class="toolButtons" style="margin-bottom: 10px;">
-            <button id="markerModeBtn">マーカー追加</button>
-            <button id="arrowModeBtn">矢印追加</button>
-            <button id="panModeBtn">移動</button>
-        </div>
-        <!-- ★★★ ここまで追加 ★★★ -->
-
-        <h3 class="fold-header" data-target="markerSection">
-            砦マーカー <span class="fold-icon">▲</span>
-        </h3>
-        <div id="markerSection" class="fold-content">
-
-            <div class="markerNameWrapper help-wrapper">
-                <input id="markerName" placeholder="例：A / B / C">
-                <span class="help-icon">?</span>
-                <div class="help-popup global-help">マーカー内の文字を追加</div>
-            </div>
-
-            <div class="colorPicker">
-                <div class="colorOption" style="background:#ff7eb9"></div>
-                <div class="colorOption" style="background:#7ed6ff"></div>
-                <div class="colorOption" style="background:#fff47e"></div>
-            </div>
-
-            <div class="opacityPicker">
-                <span>透明度</span>
-                <input type="range" id="markerOpacity" min="0" max="1" step="0.01" value="1">
-                <span id="markerOpacityValue">1.00</span>
-            </div>
-        </div>
-
-        <hr>
-
-        <h3 class="fold-header" data-target="arrowSection">
-            矢印スタンプ <span class="fold-icon">▲</span>
-        </h3>
-        <div id="arrowSection" class="fold-content">
-
-            <div class="arrowColorPicker">
-                <div class="arrowColorOption" style="background:#ff7eb9"></div>
-                <div class="arrowColorOption" style="background:#7ed6ff"></div>
-                <div class="arrowColorOption" style="background:#fff47e"></div>
-            </div>
-
-            <div class="arrowOpacityPicker">
-                <span>透明度</span>
-                <input type="range" id="arrowOpacity" min="0" max="1" step="0.01" value="1">
-                <span id="arrowOpacityValue">1.00</span>
-            </div>
-        </div>
-
-        <hr>
-
-        <h3 class="fold-header" data-target="textSection">
-            テキスト <span class="fold-icon">▲</span>
-        </h3>
-        <div id="textSection" class="fold-content">
-
-            <div class="textColorPicker">
-                <div class="textColorOption" style="background:#ff7eb9"></div>
-                <div class="textColorOption" style="background:#7ed6ff"></div>
-                <div class="textColorOption" style="background:#fff47e"></div>
-            </div>
-
-            <div class="textSizePicker">
-                <span>文字サイズ</span>
-                <input type="range" id="textSize" min="16" max="28" step="1" value="16">
-            </div>
-
-            <div class="textAddButtonWrapper help-wrapper">
-                <button id="addTextModeBtn">テキスト追加モード</button>
-                <span class="help-icon">?</span>
-                <div class="help-popup global-help">キャンバスをクリックしてテキストを入力</div>
-            </div>
-        </div>
-
-        <hr>
-
-        <h3 class="fold-header" data-target="penSection">
-            ペンツール <span class="fold-icon">▲</span>
-        </h3>
-        <div id="penSection" class="fold-content">
-
-            <div class="penColorPicker">
-                <div class="penColorOption" style="background:#ff7eb9"></div>
-                <div class="penColorOption" style="background:#7ed6ff"></div>
-                <div class="penColorOption" style="background:#fff47e"></div>
-            </div>
-
-            <div class="penWidthPicker">
-                <span>太さ</span>
-                <select id="penWidth">
-                    <option value="1">1px</option>
-                    <option value="3">3px</option>
-                    <option value="5">5px</option>
-                    <option value="8">8px</option>
-                </select>
-            </div>
-
-            <div class="penOpacityPicker">
-                <span>透明度</span>
-                <input type="range" id="penOpacity" min="0" max="1" step="0.01" value="1">
-                <span id="penOpacityValue">1.00</span>
-            </div>
-
-            <button id="penModeBtn">ペン ON/OFF</button>
-            <button id="penClearBtn">線を消す</button>
-        </div>
-
-        <hr>
-
-        <h3 class="fold-header" data-target="commentSection">
-            コメント <span class="fold-icon">▲</span>
-        </h3>
-        <div id="commentSection" class="fold-content">
-            <div id="commentList"></div>
-        </div>
-
+    <!-- 矢印色 -->
+    <div class="arrowColorGroup">
+        <div class="arrowColorOption" style="background:#ff7eb9"></div>
+        <div class="arrowColorOption" style="background:#ff65a3"></div>
+        <div class="arrowColorOption" style="background:#7afcff"></div>
+        <div class="arrowColorOption" style="background:#feff9c"></div>
+        <div class="arrowColorOption" style="background:#fff740"></div>
     </div>
+
+    <!-- テキスト色 -->
+    <div class="textColorGroup">
+        <div class="textColorOption" style="background:#000"></div>
+        <div class="textColorOption" style="background:#ff0000"></div>
+        <div class="textColorOption" style="background:#00ff00"></div>
+        <div class="textColorOption" style="background:#0000ff"></div>
+    </div>
+
+    <!-- ペン色 -->
+    <div class="penColorGroup">
+        <div class="penColorOption" style="background:#ff7eb9"></div>
+        <div class="penColorOption" style="background:#ff65a3"></div>
+        <div class="penColorOption" style="background:#7afcff"></div>
+        <div class="penColorOption" style="background:#feff9c"></div>
+        <div class="penColorOption" style="background:#fff740"></div>
+    </div>
+
+    <!-- サイズスライダー -->
+    <div class="sliderGroup">
+        <label>マーカーサイズ</label>
+        <input id="markerSizeSlider" type="range" min="5" max="40" value="10">
+
+        <label>矢印サイズ</label>
+        <input id="arrowSizeSlider" type="range" min="0.5" max="3" step="0.1" value="1">
+    </div>
+
 </div>
 
+<!-- キャンバス -->
+<div id="canvasWrapper">
+    <canvas id="mapCanvas" width="1600" height="1200"></canvas>
+    <div id="dropHint">画像をここにドロップ</div>
+</div>
+
+<!-- ★ 右クリックメニュー（新規追加） -->
 <div id="markerMenu" class="contextMenu hidden">
-    <div id="addCommentBtn">コメント追加</div>
-    <div id="deleteMarkerBtn">削除</div>
-</div>
-
-<div id="textMenu" class="contextMenu hidden">
-    <div id="editTextBtn">編集</div>
-    <div id="deleteTextBtn">削除</div>
+    <button id="deleteMarkerBtn">削除</button>
 </div>
 
 <div id="arrowMenu" class="contextMenu hidden">
-    <div id="arrowRotateBtn">回転</div>
-    <div id="arrowScaleUpBtn">拡大</div>
-    <div id="arrowScaleDownBtn">縮小</div>
-    <div id="arrowDeleteBtn">削除</div>
+    <button id="arrowRotateLeftBtn">左回転</button>
+    <button id="arrowRotateRightBtn">右回転</button>
+    <button id="arrowDeleteBtn">削除</button>
+</div>
+
+<div id="textMenu" class="contextMenu hidden">
+    <button id="deleteTextBtn">削除</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
