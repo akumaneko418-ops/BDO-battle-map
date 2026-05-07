@@ -625,7 +625,7 @@ function drawCanvas() {
         }
     }
 
-    /* 矢印（↑デザイン） */
+        /* 矢印（↑デザイン） */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -692,10 +692,9 @@ function drawCanvas() {
 
         ctx.restore();
     }
-
+   
     ctx.restore();
 }
-
 /* ============================================================
    画像ドラッグ＆ドロップ
 ============================================================ */
@@ -897,8 +896,6 @@ document.addEventListener("click", () => {
 ============================================================ */
 document.querySelectorAll(".fold-header").forEach(header => {
     header.addEventListener("click", (e) => {
-        // ツールチャンネルのクリックで中身を開閉
-        // tooltip クリックは無視
         if (e.target.classList.contains("tooltip")) return;
 
         const content = header.nextElementSibling;
