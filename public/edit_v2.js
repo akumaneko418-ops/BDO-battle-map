@@ -124,11 +124,11 @@ let currentTool = "none";
 
 let currentMarkerColor = "#ff7eb9";
 let currentMarkerOpacity = 1.0;
-let currentMarkerSize = 10;   // ★ 追加：マーカーサイズ
+let currentMarkerSize = 10;
 
 let currentArrowColor = "#ff7eb9";
 let currentArrowOpacity = 1.0;
-let currentArrowScale = 1.0;  // ★ 追加：矢印サイズ
+let currentArrowScale = 1.0;
 
 let currentTextColor = "#ff7eb9";
 let currentTextSize = 16;
@@ -187,12 +187,13 @@ document.getElementById("panModeBtn").onclick = () => {
     penMode = false;
     textAddMode = false;
 };
+
 /* ============================================================
-   カラーピッカー（active クラス付与対応）
+   カラーピッカー（selected クラス付与）
 ============================================================ */
 function activateColor(el, selector) {
-    document.querySelectorAll(selector).forEach(btn => btn.classList.remove("active"));
-    el.classList.add("active");
+    document.querySelectorAll(selector).forEach(btn => btn.classList.remove("selected"));
+    el.classList.add("selected");
 }
 
 document.querySelectorAll(".colorOption").forEach((el) => {
@@ -234,6 +235,32 @@ document.getElementById("markerSizeSlider").addEventListener("input", (e) => {
 
 document.getElementById("arrowSizeSlider").addEventListener("input", (e) => {
     currentArrowScale = Number(e.target.value);
+});
+
+/* ============================================================
+   不透明度・テキストサイズ・ペン幅スライダー
+============================================================ */
+document.getElementById("markerOpacitySlider").addEventListener("input", (e) => {
+    currentMarkerOpacity = Number(e.target.value);
+    document.getElementById("markerOpacityValue").textContent = currentMarkerOpacity.toFixed(2);
+});
+
+document.getElementById("arrowOpacitySlider").addEventListener("input", (e) => {
+    currentArrowOpacity = Number(e.target.value);
+    document.getElementById("arrowOpacityValue").textContent = currentArrowOpacity.toFixed(2);
+});
+
+document.getElementById("penOpacitySlider").addEventListener("input", (e) => {
+    currentPenOpacity = Number(e.target.value);
+    document.getElementById("penOpacityValue").textContent = currentPenOpacity.toFixed(2);
+});
+
+document.getElementById("textSizeSlider").addEventListener("input", (e) => {
+    currentTextSize = Number(e.target.value);
+});
+
+document.getElementById("penWidthSlider").addEventListener("input", (e) => {
+    currentPenWidth = Number(e.target.value);
 });
 
 /* ============================================================
@@ -312,7 +339,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ============================================================
-   キャンバスクリック処理（サイズ対応版）
+   キャンバスクリック処理
 ============================================================ */
 canvas.addEventListener("click", (e) => {
     const { x, y } = getCanvasClickPosition(e);
@@ -336,7 +363,7 @@ canvas.addEventListener("click", (e) => {
             name: document.getElementById("markerName").value,
             color: currentMarkerColor,
             opacity: currentMarkerOpacity,
-            size: currentMarkerSize   // ★ 追加
+            size: currentMarkerSize
         });
         drawCanvas();
         broadcastState();
@@ -350,7 +377,7 @@ canvas.addEventListener("click", (e) => {
             x,
             y,
             angle: 0,
-            scale: currentArrowScale,  // ★ 追加
+            scale: currentArrowScale,
             color: currentArrowColor,
             opacity: currentArrowOpacity
         });
@@ -361,7 +388,7 @@ canvas.addEventListener("click", (e) => {
 });
 
 /* ============================================================
-   マーカー／矢印ドラッグ（サイズ対応）
+   マーカー／矢印ドラッグ
 ============================================================ */
 let draggingMarker = null;
 let draggingArrow = null;
@@ -481,6 +508,7 @@ canvas.addEventListener("mouseup", () => {
         broadcastState();
     }
 });
+
 /* ============================================================
    ズーム
 ============================================================ */
@@ -523,7 +551,7 @@ document.getElementById("exportPngBtn").onclick = () => {
 };
 
 /* ============================================================
-   描画処理（矢印デザイン ↑ に変更済み）
+   描画処理
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -584,7 +612,7 @@ function drawCanvas() {
         ctx.globalAlpha = a.opacity || currentArrowOpacity;
 
         ctx.beginPath();
-        ctx.moveTo(0, -25);   // 上端
+        ctx.moveTo(0, -25);
         ctx.lineTo(10, 0);
         ctx.lineTo(4, 0);
         ctx.lineTo(4, 25);
@@ -671,7 +699,7 @@ document.body.addEventListener("drop", (e) => {
 });
 
 /* ============================================================
-   ★ 右クリックメニュー（新規追加）
+   右クリックメニュー
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -777,6 +805,19 @@ document.getElementById("deleteTextBtn").onclick = () => {
 ============================================================ */
 document.addEventListener("click", () => {
     hideAllMenus();
+});
+
+/* ============================================================
+   折りたたみ UI
+============================================================ */
+document.querySelectorAll(".fold-header").forEach(header => {
+    header.addEventListener("click", () => {
+        const content = header.nextElementSibling;
+        if (!content) return;
+        content.classList.toggle("hidden");
+        const icon = header.querySelector(".fold-icon");
+        if (icon) icon.textContent = content.classList.contains("hidden") ? "▶" : "▼";
+    });
 });
 
 /* ============================================================
