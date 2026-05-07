@@ -11,10 +11,10 @@
     <h2>BDO Battle Map Editor</h2>
 </div>
 
-<!-- キャンバス上部の操作バー -->
 <div class="canvas-toolbar">
 
-    <!-- プリセット画像プルダウン -->
+    <input id="fileNameInput" value="無題" class="fileNameInput">
+
     <select id="presetSelect">
         <option value="">プリセット画像を選択</option>
         <option value="/presets/sample_map.png">sample_map.png</option>
@@ -30,24 +30,20 @@
     <button id="zoomOutBtn">－</button>
     <button id="zoomResetBtn">100%</button>
 
-    <!-- 全体保存ボタン（濃い青＋白文字） -->
     <button id="saveAllBtn">全体を保存</button>
 </div>
 
 <div class="main-container">
 
-    <!-- 左側：キャンバス -->
     <div class="canvas-area">
         <div id="dropHint">ここに画像をドラッグ＆ドロップしてアップロード</div>
         <canvas id="mapCanvas" width="1600" height="900"></canvas>
     </div>
 
-    <!-- 右側：ツールパネル -->
     <div class="right-panel">
 
-        <!-- 砦マーカー -->
         <h3 class="fold-header" data-target="markerSection">
-            砦マーカー <span class="fold-icon">▼</span>
+            砦マーカー <span class="fold-icon">▲</span>
         </h3>
         <div id="markerSection" class="fold-content">
 
@@ -72,9 +68,8 @@
 
         <hr>
 
-        <!-- 矢印スタンプ -->
         <h3 class="fold-header" data-target="arrowSection">
-            矢印スタンプ <span class="fold-icon">▼</span>
+            矢印スタンプ <span class="fold-icon">▲</span>
         </h3>
         <div id="arrowSection" class="fold-content">
 
@@ -93,9 +88,8 @@
 
         <hr>
 
-        <!-- テキスト -->
         <h3 class="fold-header" data-target="textSection">
-            テキスト <span class="fold-icon">▼</span>
+            テキスト <span class="fold-icon">▲</span>
         </h3>
         <div id="textSection" class="fold-content">
 
@@ -119,9 +113,8 @@
 
         <hr>
 
-        <!-- ペンツール -->
         <h3 class="fold-header" data-target="penSection">
-            ペンツール <span class="fold-icon">▼</span>
+            ペンツール <span class="fold-icon">▲</span>
         </h3>
         <div id="penSection" class="fold-content">
 
@@ -153,9 +146,8 @@
 
         <hr>
 
-        <!-- コメント一覧 -->
         <h3 class="fold-header" data-target="commentSection">
-            コメント <span class="fold-icon">▼</span>
+            コメント <span class="fold-icon">▲</span>
         </h3>
         <div id="commentSection" class="fold-content">
             <div id="commentList"></div>
@@ -164,7 +156,6 @@
     </div>
 </div>
 
-<!-- 右クリックメニュー -->
 <div id="markerMenu" class="contextMenu hidden">
     <div id="addCommentBtn">コメント追加</div>
     <div id="deleteMarkerBtn">削除</div>
