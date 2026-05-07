@@ -124,9 +124,11 @@ let currentTool = "none";
 
 let currentMarkerColor = "#ff7eb9";
 let currentMarkerOpacity = 1.0;
+let currentMarkerSize = 10;   // ★ 追加：マーカーサイズ
 
 let currentArrowColor = "#ff7eb9";
 let currentArrowOpacity = 1.0;
+let currentArrowScale = 1.0;  // ★ 追加：矢印サイズ
 
 let currentTextColor = "#ff7eb9";
 let currentTextSize = 16;
@@ -185,13 +187,18 @@ document.getElementById("panModeBtn").onclick = () => {
     penMode = false;
     textAddMode = false;
 };
-
 /* ============================================================
-   カラーピッカー
+   カラーピッカー（active クラス付与対応）
 ============================================================ */
+function activateColor(el, selector) {
+    document.querySelectorAll(selector).forEach(btn => btn.classList.remove("active"));
+    el.classList.add("active");
+}
+
 document.querySelectorAll(".colorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentMarkerColor = getComputedStyle(el).backgroundColor;
+        activateColor(el, ".colorOption");
         currentTool = "marker";
     });
 });
@@ -199,6 +206,7 @@ document.querySelectorAll(".colorOption").forEach((el) => {
 document.querySelectorAll(".arrowColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentArrowColor = getComputedStyle(el).backgroundColor;
+        activateColor(el, ".arrowColorOption");
         currentTool = "arrow";
     });
 });
@@ -206,13 +214,26 @@ document.querySelectorAll(".arrowColorOption").forEach((el) => {
 document.querySelectorAll(".textColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentTextColor = getComputedStyle(el).backgroundColor;
+        activateColor(el, ".textColorOption");
     });
 });
 
 document.querySelectorAll(".penColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentPenColor = getComputedStyle(el).backgroundColor;
+        activateColor(el, ".penColorOption");
     });
+});
+
+/* ============================================================
+   マーカー／矢印サイズスライダー
+============================================================ */
+document.getElementById("markerSizeSlider").addEventListener("input", (e) => {
+    currentMarkerSize = Number(e.target.value);
+});
+
+document.getElementById("arrowSizeSlider").addEventListener("input", (e) => {
+    currentArrowScale = Number(e.target.value);
 });
 
 /* ============================================================
@@ -291,7 +312,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ============================================================
-   キャンバスクリック処理
+   キャンバスクリック処理（サイズ対応版）
 ============================================================ */
 canvas.addEventListener("click", (e) => {
     const { x, y } = getCanvasClickPosition(e);
@@ -314,7 +335,8 @@ canvas.addEventListener("click", (e) => {
             y,
             name: document.getElementById("markerName").value,
             color: currentMarkerColor,
-            opacity: currentMarkerOpacity
+            opacity: currentMarkerOpacity,
+            size: currentMarkerSize   // ★ 追加
         });
         drawCanvas();
         broadcastState();
@@ -328,7 +350,7 @@ canvas.addEventListener("click", (e) => {
             x,
             y,
             angle: 0,
-            scale: 1,
+            scale: currentArrowScale,  // ★ 追加
             color: currentArrowColor,
             opacity: currentArrowOpacity
         });
@@ -339,7 +361,7 @@ canvas.addEventListener("click", (e) => {
 });
 
 /* ============================================================
-   マーカー／矢印ドラッグ
+   マーカー／矢印ドラッグ（サイズ対応）
 ============================================================ */
 let draggingMarker = null;
 let draggingArrow = null;
@@ -350,12 +372,12 @@ function hitTestMarker(x, y) {
     return markers.find(m => {
         const dx = x - m.x;
         const dy = y - m.y;
-        return Math.sqrt(dx * dx + dy * dy) <= 10;
+        return Math.sqrt(dx * dx + dy * dy) <= (m.size || 10);
     }) || null;
 }
 
 function hitTestArrow(x, y) {
-    const r = 25;
+    const r = 25 * (currentArrowScale || 1);
     return arrows.find(a => {
         const dx = x - a.x;
         const dy = y - a.y;
@@ -411,8 +433,6 @@ canvas.addEventListener("mousedown", (e) => {
         panStartY = e.clientY - offsetY;
         return;
     }
-
-    return;
 });
 
 canvas.addEventListener("mousemove", (e) => {
@@ -461,7 +481,6 @@ canvas.addEventListener("mouseup", () => {
         broadcastState();
     }
 });
-
 /* ============================================================
    ズーム
 ============================================================ */
@@ -504,7 +523,7 @@ document.getElementById("exportPngBtn").onclick = () => {
 };
 
 /* ============================================================
-   描画処理
+   描画処理（矢印デザイン ↑ に変更済み）
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -521,6 +540,7 @@ function drawCanvas() {
         ctx.drawImage(backgroundImage, 0, 0);
     }
 
+    /* ペン */
     penPaths.forEach(path => {
         ctx.save();
         ctx.strokeStyle = path.color;
@@ -538,22 +558,24 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* マーカー */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
 
         ctx.beginPath();
-        ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, m.size || 10, 0, Math.PI * 2);
         ctx.fillStyle = m.color;
         ctx.fill();
 
         ctx.fillStyle = "#000";
         ctx.font = `700 14px "Noto Sans JP", "Yu Gothic", sans-serif`;
-        ctx.fillText(m.name, m.x + 12, m.y + 4);
+        ctx.fillText(m.name, m.x + (m.size || 10) + 4, m.y + 4);
 
         ctx.restore();
     });
 
+    /* 矢印（↑デザイン） */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -562,9 +584,13 @@ function drawCanvas() {
         ctx.globalAlpha = a.opacity || currentArrowOpacity;
 
         ctx.beginPath();
-        ctx.moveTo(0, -20);
-        ctx.lineTo(15, 20);
-        ctx.lineTo(-15, 20);
+        ctx.moveTo(0, -25);   // 上端
+        ctx.lineTo(10, 0);
+        ctx.lineTo(4, 0);
+        ctx.lineTo(4, 25);
+        ctx.lineTo(-4, 25);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-10, 0);
         ctx.closePath();
 
         ctx.fillStyle = a.color || currentArrowColor;
@@ -573,6 +599,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* テキスト */
     texts.forEach(t => {
         ctx.save();
 
@@ -589,6 +616,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* 入力中テキスト */
     if (typing) {
         ctx.save();
 
@@ -643,12 +671,112 @@ document.body.addEventListener("drop", (e) => {
 });
 
 /* ============================================================
+   ★ 右クリックメニュー（新規追加）
+============================================================ */
+canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+
+    const { x, y } = getCanvasClickPosition(e);
+
+    const hitMarker = hitTestMarker(x, y);
+    const hitArrow = hitTestArrow(x, y);
+    const hitText = texts.find(t => {
+        const width = ctx.measureText(t.text).width;
+        return (
+            x >= t.x &&
+            x <= t.x + width &&
+            y <= t.y &&
+            y >= t.y - t.size
+        );
+    });
+
+    hideAllMenus();
+
+    if (hitMarker) {
+        window.selectedMarker = hitMarker;
+        showMenu("markerMenu", e.clientX, e.clientY);
+        return;
+    }
+
+    if (hitArrow) {
+        window.selectedArrow = hitArrow;
+        showMenu("arrowMenu", e.clientX, e.clientY);
+        return;
+    }
+
+    if (hitText) {
+        window.selectedText = hitText;
+        showMenu("textMenu", e.clientX, e.clientY);
+        return;
+    }
+});
+
+function hideAllMenus() {
+    document.getElementById("markerMenu").classList.add("hidden");
+    document.getElementById("arrowMenu").classList.add("hidden");
+    document.getElementById("textMenu").classList.add("hidden");
+}
+
+function showMenu(id, x, y) {
+    const menu = document.getElementById(id);
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+    menu.classList.remove("hidden");
+}
+
+/* ============================================================
+   メニューのボタン動作
+============================================================ */
+document.getElementById("deleteMarkerBtn").onclick = () => {
+    if (!window.selectedMarker) return;
+    saveHistory();
+    markers = markers.filter(m => m !== window.selectedMarker);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateLeftBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle -= Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateRightBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle += Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowDeleteBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    arrows = arrows.filter(a => a !== window.selectedArrow);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("deleteTextBtn").onclick = () => {
+    if (!window.selectedText) return;
+    saveHistory();
+    texts = texts.filter(t => t !== window.selectedText);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+/* ============================================================
    メニュー閉じる
 ============================================================ */
 document.addEventListener("click", () => {
-    document.getElementById("markerMenu").classList.add("hidden");
-    document.getElementById("textMenu").classList.add("hidden");
-    document.getElementById("arrowMenu").classList.add("hidden");
+    hideAllMenus();
 });
 
 /* ============================================================
