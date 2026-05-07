@@ -77,6 +77,15 @@ function saveHistory() {
     updateUndoRedoButtons();
 }
 
+function broadcastState() {
+    socket.emit("edit_state", getCurrentState());
+}
+
+socket.on("edit_state", (state) => {
+    restoreState(state);
+    // restoreState 内で drawCanvas 済み
+});
+
 function undo() {
     if (history.length === 0) return;
 
@@ -87,6 +96,7 @@ function undo() {
     restoreState(JSON.parse(last));
 
     updateUndoRedoButtons();
+    broadcastState();
 }
 
 function redo() {
@@ -99,6 +109,7 @@ function redo() {
     restoreState(JSON.parse(next));
 
     updateUndoRedoButtons();
+    broadcastState();
 }
 
 function updateUndoRedoButtons() {
@@ -107,7 +118,7 @@ function updateUndoRedoButtons() {
 }
 
 /* ============================================================
-   Undo / Redo ボタン（←これが無いと Undo が動かない）
+   Undo / Redo ボタン
 ============================================================ */
 document.getElementById("undoBtn").onclick = () => undo();
 document.getElementById("redoBtn").onclick = () => redo();
@@ -132,6 +143,39 @@ let currentPenWidth = 3;
 let currentPenOpacity = 1.0;
 
 let textAddMode = false;
+
+/* ============================================================
+   ツールバーのボタン紐付け
+============================================================ */
+document.getElementById("markerSection").onclick = () => {
+    currentTool = "marker";
+    penMode = false;
+    textAddMode = false;
+};
+
+document.getElementById("arrowSection").onclick = () => {
+    currentTool = "arrow";
+    penMode = false;
+    textAddMode = false;
+};
+
+document.getElementById("penModeBtn").onclick = () => {
+    currentTool = "pen";
+    penMode = true;
+    textAddMode = false;
+};
+
+document.getElementById("addTextModeBtn").onclick = () => {
+    currentTool = "text";
+    textAddMode = true;
+    penMode = false;
+};
+
+document.getElementById("panModeBtn").onclick = () => {
+    currentTool = "pan";
+    penMode = false;
+    textAddMode = false;
+};
 
 /* ============================================================
    クリック座標（パン＋中央ズーム対応）
@@ -159,13 +203,6 @@ let typingText = "";
 let typingX = 0;
 let typingY = 0;
 
-document.getElementById("addTextModeBtn").onclick = () => {
-    currentTool = "text";
-    textAddMode = !textAddMode;
-    penMode = false;
-};
-/* ======== ▲▲▲ Part 1 からの続き ▲▲▲ ======== */
-
 /* ============================================================
    キャンバスクリック処理（currentTool で動作を統一）
 ============================================================ */
@@ -179,6 +216,7 @@ canvas.addEventListener("click", (e) => {
         typingX = x;
         typingY = y;
         drawCanvas();
+        broadcastState();
         return;
     }
 
@@ -194,6 +232,7 @@ canvas.addEventListener("click", (e) => {
             opacity: currentMarkerOpacity
         });
         drawCanvas();
+        broadcastState();
         return;
     }
 
@@ -210,11 +249,40 @@ canvas.addEventListener("click", (e) => {
             opacity: currentArrowOpacity
         });
         drawCanvas();
+        broadcastState();
         return;
     }
 
     // ペンは mousedown で処理するので click では何もしない
 });
+
+/* ======== ▼▼▼ Part 2 に続く ▼▼▼ ======== */
+/* ======== ▲▲▲ Part 1 からの続き ▲▲▲ ======== */
+
+/* ============================================================
+   マーカー／矢印ドラッグ用
+============================================================ */
+let draggingMarker = null;
+let draggingArrow = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+function hitTestMarker(x, y) {
+    return markers.find(m => {
+        const dx = x - m.x;
+        const dy = y - m.y;
+        return Math.sqrt(dx * dx + dy * dy) <= 10;
+    }) || null;
+}
+
+function hitTestArrow(x, y) {
+    const r = 25;
+    return arrows.find(a => {
+        const dx = x - a.x;
+        const dy = y - a.y;
+        return Math.abs(dx) <= r && Math.abs(dy) <= r;
+    }) || null;
+}
 
 /* ============================================================
    ペン描画
@@ -222,10 +290,35 @@ canvas.addEventListener("click", (e) => {
 let drawing = false;
 
 canvas.addEventListener("mousedown", (e) => {
+    const { x, y } = getCanvasClickPosition(e);
+
+    // マーカーのドラッグ開始
+    if (currentTool === "marker") {
+        const hit = hitTestMarker(x, y);
+        if (hit) {
+            saveHistory();
+            draggingMarker = hit;
+            dragOffsetX = x - hit.x;
+            dragOffsetY = y - hit.y;
+            return;
+        }
+    }
+
+    // 矢印のドラッグ開始
+    if (currentTool === "arrow") {
+        const hit = hitTestArrow(x, y);
+        if (hit) {
+            saveHistory();
+            draggingArrow = hit;
+            dragOffsetX = x - hit.x;
+            dragOffsetY = y - hit.y;
+            return;
+        }
+    }
+
+    // ペン描画開始
     if (currentTool === "pen") {
         drawing = true;
-
-        const { x, y } = getCanvasClickPosition(e);
 
         saveHistory();
         penPaths.push({
@@ -234,6 +327,7 @@ canvas.addEventListener("mousedown", (e) => {
             width: currentPenWidth,
             opacity: currentPenOpacity
         });
+        return;
     }
 
     // パン開始
@@ -245,11 +339,29 @@ canvas.addEventListener("mousedown", (e) => {
 });
 
 canvas.addEventListener("mousemove", (e) => {
+    const { x, y } = getCanvasClickPosition(e);
+
+    // マーカー移動
+    if (draggingMarker) {
+        draggingMarker.x = x - dragOffsetX;
+        draggingMarker.y = y - dragOffsetY;
+        drawCanvas();
+        return;
+    }
+
+    // 矢印移動
+    if (draggingArrow) {
+        draggingArrow.x = x - dragOffsetX;
+        draggingArrow.y = y - dragOffsetY;
+        drawCanvas();
+        return;
+    }
+
     // ペン描画
     if (currentTool === "pen" && drawing) {
-        const { x, y } = getCanvasClickPosition(e);
         penPaths[penPaths.length - 1].points.push({ x, y });
         drawCanvas();
+        return;
     }
 
     // パン移動
@@ -261,8 +373,20 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mouseup", () => {
+    let changed = false;
+
+    if (drawing) changed = true;
+    if (draggingMarker || draggingArrow) changed = true;
+
     drawing = false;
     isPanning = false;
+    draggingMarker = null;
+    draggingArrow = null;
+
+    if (changed) {
+        drawCanvas();
+        broadcastState();
+    }
 });
 
 /* ============================================================
@@ -272,18 +396,38 @@ document.getElementById("zoomInBtn").onclick = () => {
     saveHistory();
     zoom += zoomStep;
     drawCanvas();
+    broadcastState();
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
     saveHistory();
     zoom = Math.max(0.2, zoom - zoomStep);
     drawCanvas();
+    broadcastState();
 };
 
 document.getElementById("zoomResetBtn").onclick = () => {
     saveHistory();
     zoom = 1.0;
     drawCanvas();
+    broadcastState();
+};
+
+/* ============================================================
+   PNG 書き出し
+============================================================ */
+document.getElementById("exportPngBtn").onclick = () => {
+    canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "battle-map.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    });
 };
 
 /* ============================================================
@@ -341,6 +485,8 @@ function drawCanvas() {
 
         ctx.restore();
     });
+
+/* ======== ▼▼▼ Part 3 に続く ▼▼▼ ======== */
 /* ======== ▲▲▲ Part 2 からの続き ▲▲▲ ======== */
 
 /* ===== 矢印スタンプ ===== */
@@ -427,6 +573,7 @@ document.body.addEventListener("drop", (e) => {
 
             document.getElementById("dropHint").style.display = "none";
             drawCanvas();
+            broadcastState();
         };
         img.src = reader.result;
     };
@@ -449,5 +596,3 @@ updateUndoRedoButtons();
 drawCanvas();
 
 /* ======== ★★★ Part 3 / 3（END） ★★★ ======== */
-
-
