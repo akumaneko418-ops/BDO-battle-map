@@ -9,6 +9,9 @@ let currentTextColor = "#000000";
 let currentTextSize = 16;
 let textAddMode = false;
 
+let zoom = 1.0;
+let zoomStep = 0.1;
+
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -48,12 +51,30 @@ document.getElementById("addTextModeBtn").onclick = () => {
 };
 
 /* ============================
+   ズームボタン
+   ============================ */
+document.getElementById("zoomInBtn").onclick = () => {
+    zoom += zoomStep;
+    drawCanvas();
+};
+
+document.getElementById("zoomOutBtn").onclick = () => {
+    zoom = Math.max(0.2, zoom - zoomStep);
+    drawCanvas();
+};
+
+document.getElementById("zoomResetBtn").onclick = () => {
+    zoom = 1.0;
+    drawCanvas();
+};
+
+/* ============================
    キャンバス左クリック
    ============================ */
 canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
 
     /* ---- テキスト追加モード ---- */
     if (textAddMode) {
@@ -107,8 +128,8 @@ canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
 
     /* ---- テキスト判定 ---- */
     for (let t of texts) {
@@ -237,6 +258,9 @@ function highlightMarker(id, on) {
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    ctx.save();
+    ctx.scale(zoom, zoom);
+
     /* ---- マーカー ---- */
     markers.forEach(m => {
         ctx.beginPath();
@@ -270,6 +294,8 @@ function drawCanvas() {
 
         ctx.restore();
     });
+
+    ctx.restore();
 }
 
 /* ============================
