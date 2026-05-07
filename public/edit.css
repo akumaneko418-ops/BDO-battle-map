@@ -43,6 +43,15 @@ body {
     cursor: pointer;
 }
 
+#saveAllBtn {
+    margin-left: auto;
+    background: #0052CC;
+    color: #fff;
+    font-weight: bold;
+    padding: 6px 14px;
+    border-radius: 4px;
+}
+
 button.disabled {
     opacity: 0.4;
     pointer-events: none;
@@ -87,9 +96,28 @@ button.disabled {
     box-sizing: border-box;
 }
 
-.right-panel h3 {
+/* ============================
+   折りたたみ UI
+============================ */
+.fold-header {
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
     margin-top: 15px;
     margin-bottom: 8px;
+    user-select: none;
+}
+
+.fold-icon {
+    font-weight: bold;
+}
+
+.fold-content {
+    display: block;
+}
+
+.fold-content.hidden {
+    display: none;
 }
 
 /* ============================
@@ -115,7 +143,6 @@ button.disabled {
     white-space: nowrap;
 }
 
-/* help-wrapper は relative にしない */
 .help-wrapper {
     position: static !important;
 }
@@ -166,13 +193,15 @@ button.disabled {
 ============================ */
 .opacityPicker,
 .arrowOpacityPicker,
-.penOpacityPicker {
+.penOpacityPicker,
+.textSizePicker {
     margin-bottom: 12px;
 }
 
 .opacityPicker input,
 .arrowOpacityPicker input,
-.penOpacityPicker input {
+.penOpacityPicker input,
+.textSizePicker input {
     width: 150px;
 }
 
@@ -184,12 +213,8 @@ button.disabled {
 }
 
 /* ============================
-   テキスト設定
+   テキスト追加
 ============================ */
-.textSizePicker {
-    margin-bottom: 10px;
-}
-
 .textAddButtonWrapper {
     display: flex;
     align-items: center;
