@@ -1,105 +1,305 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>BDO Battle Map Editor</title>
-    <link rel="stylesheet" href="edit.css">
-</head>
-<body>
+/* ============================================================
+   ズーム
+============================================================ */
+document.getElementById("zoomInBtn").onclick = () => {
+    saveHistory();
+    zoom += zoomStep;
+    drawCanvas();
+    broadcastState();
+};
 
-<div id="toolbar">
+document.getElementById("zoomOutBtn").onclick = () => {
+    saveHistory();
+    zoom = Math.max(0.2, zoom - zoomStep);
+    drawCanvas();
+    broadcastState();
+};
 
-    <!-- マーカー名 -->
-    <input id="markerName" type="text" placeholder="マーカー名" />
+document.getElementById("zoomResetBtn").onclick = () => {
+    saveHistory();
+    zoom = 1.0;
+    drawCanvas();
+    broadcastState();
+};
 
-    <!-- ツールボタン -->
-    <button id="markerModeBtn">マーカー</button>
-    <button id="arrowModeBtn">矢印</button>
-    <button id="penModeBtn">ペン</button>
-    <button id="addTextModeBtn">テキスト</button>
-    <button id="panModeBtn">移動</button>
+/* ============================================================
+   PNG 書き出し
+============================================================ */
+document.getElementById("exportPngBtn").onclick = () => {
+    canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "battle-map.png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    });
+};
 
-    <!-- Undo / Redo -->
-    <button id="undoBtn">Undo</button>
-    <button id="redoBtn">Redo</button>
+/* ============================================================
+   描画処理（矢印デザイン ↑ に変更済み）
+============================================================ */
+function drawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    <!-- PNG 出力 -->
-    <button id="exportPngBtn">PNG</button>
+    ctx.save();
 
-    <!-- ズーム -->
-    <button id="zoomInBtn">＋</button>
-    <button id="zoomOutBtn">－</button>
-    <button id="zoomResetBtn">リセット</button>
+    ctx.translate(offsetX, offsetY);
 
-    <!-- 色選択 -->
-    <div class="colorGroup">
-        <div class="colorOption" style="background:#ff7eb9"></div>
-        <div class="colorOption" style="background:#ff65a3"></div>
-        <div class="colorOption" style="background:#7afcff"></div>
-        <div class="colorOption" style="background:#feff9c"></div>
-        <div class="colorOption" style="background:#fff740"></div>
-    </div>
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-    <!-- 矢印色 -->
-    <div class="arrowColorGroup">
-        <div class="arrowColorOption" style="background:#ff7eb9"></div>
-        <div class="arrowColorOption" style="background:#ff65a3"></div>
-        <div class="arrowColorOption" style="background:#7afcff"></div>
-        <div class="arrowColorOption" style="background:#feff9c"></div>
-        <div class="arrowColorOption" style="background:#fff740"></div>
-    </div>
+    if (backgroundImage) {
+        ctx.drawImage(backgroundImage, 0, 0);
+    }
 
-    <!-- テキスト色 -->
-    <div class="textColorGroup">
-        <div class="textColorOption" style="background:#000"></div>
-        <div class="textColorOption" style="background:#ff0000"></div>
-        <div class="textColorOption" style="background:#00ff00"></div>
-        <div class="textColorOption" style="background:#0000ff"></div>
-    </div>
+    /* ペン */
+    penPaths.forEach(path => {
+        ctx.save();
+        ctx.strokeStyle = path.color;
+        ctx.lineWidth = path.width;
+        ctx.globalAlpha = path.opacity;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
 
-    <!-- ペン色 -->
-    <div class="penColorGroup">
-        <div class="penColorOption" style="background:#ff7eb9"></div>
-        <div class="penColorOption" style="background:#ff65a3"></div>
-        <div class="penColorOption" style="background:#7afcff"></div>
-        <div class="penColorOption" style="background:#feff9c"></div>
-        <div class="penColorOption" style="background:#fff740"></div>
-    </div>
+        ctx.beginPath();
+        path.points.forEach((p, i) => {
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+    });
 
-    <!-- サイズスライダー -->
-    <div class="sliderGroup">
-        <label>マーカーサイズ</label>
-        <input id="markerSizeSlider" type="range" min="5" max="40" value="10">
+    /* マーカー */
+    markers.forEach(m => {
+        ctx.save();
+        ctx.globalAlpha = m.opacity;
 
-        <label>矢印サイズ</label>
-        <input id="arrowSizeSlider" type="range" min="0.5" max="3" step="0.1" value="1">
-    </div>
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size || 10, 0, Math.PI * 2);
+        ctx.fillStyle = m.color;
+        ctx.fill();
 
-</div>
+        ctx.fillStyle = "#000";
+        ctx.font = `700 14px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillText(m.name, m.x + (m.size || 10) + 4, m.y + 4);
 
-<!-- キャンバス -->
-<div id="canvasWrapper">
-    <canvas id="mapCanvas" width="1600" height="1200"></canvas>
-    <div id="dropHint">画像をここにドロップ</div>
-</div>
+        ctx.restore();
+    });
 
-<!-- ★ 右クリックメニュー（新規追加） -->
-<div id="markerMenu" class="contextMenu hidden">
-    <button id="deleteMarkerBtn">削除</button>
-</div>
+    /* 矢印（↑デザイン） */
+    arrows.forEach(a => {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(a.angle || 0);
+        ctx.scale(a.scale || 1, a.scale || 1);
+        ctx.globalAlpha = a.opacity || currentArrowOpacity;
 
-<div id="arrowMenu" class="contextMenu hidden">
-    <button id="arrowRotateLeftBtn">左回転</button>
-    <button id="arrowRotateRightBtn">右回転</button>
-    <button id="arrowDeleteBtn">削除</button>
-</div>
+        ctx.beginPath();
+        ctx.moveTo(0, -25);   // 上端
+        ctx.lineTo(10, 0);
+        ctx.lineTo(4, 0);
+        ctx.lineTo(4, 25);
+        ctx.lineTo(-4, 25);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-10, 0);
+        ctx.closePath();
 
-<div id="textMenu" class="contextMenu hidden">
-    <button id="deleteTextBtn">削除</button>
-</div>
+        ctx.fillStyle = a.color || currentArrowColor;
+        ctx.fill();
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="edit_v2.js"></script>
+        ctx.restore();
+    });
 
-</body>
-</html>
+    /* テキスト */
+    texts.forEach(t => {
+        ctx.save();
+
+        ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = t.color;
+
+        ctx.shadowColor = "rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        ctx.fillText(t.text, t.x, t.y);
+
+        ctx.restore();
+    });
+
+    /* 入力中テキスト */
+    if (typing) {
+        ctx.save();
+
+        ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = currentTextColor;
+
+        ctx.fillText(typingText, typingX, typingY);
+
+        const width = ctx.measureText(typingText).width;
+        const cursorX = typingX + width + 2;
+
+        ctx.beginPath();
+        ctx.moveTo(cursorX, typingY - currentTextSize);
+        ctx.lineTo(cursorX, typingY + 4);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = currentTextColor;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+/* ============================================================
+   画像ドラッグ＆ドロップ
+============================================================ */
+document.body.addEventListener("dragover", (e) => e.preventDefault());
+document.body.addEventListener("drop", (e) => {
+    e.preventDefault();
+
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            saveHistory();
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            backgroundImage = img;
+
+            document.getElementById("dropHint").style.display = "none";
+            drawCanvas();
+            broadcastState();
+        };
+        img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+/* ============================================================
+   ★ 右クリックメニュー（新規追加）
+============================================================ */
+canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+
+    const { x, y } = getCanvasClickPosition(e);
+
+    const hitMarker = hitTestMarker(x, y);
+    const hitArrow = hitTestArrow(x, y);
+    const hitText = texts.find(t => {
+        const width = ctx.measureText(t.text).width;
+        return (
+            x >= t.x &&
+            x <= t.x + width &&
+            y <= t.y &&
+            y >= t.y - t.size
+        );
+    });
+
+    hideAllMenus();
+
+    if (hitMarker) {
+        window.selectedMarker = hitMarker;
+        showMenu("markerMenu", e.clientX, e.clientY);
+        return;
+    }
+
+    if (hitArrow) {
+        window.selectedArrow = hitArrow;
+        showMenu("arrowMenu", e.clientX, e.clientY);
+        return;
+    }
+
+    if (hitText) {
+        window.selectedText = hitText;
+        showMenu("textMenu", e.clientX, e.clientY);
+        return;
+    }
+});
+
+function hideAllMenus() {
+    document.getElementById("markerMenu").classList.add("hidden");
+    document.getElementById("arrowMenu").classList.add("hidden");
+    document.getElementById("textMenu").classList.add("hidden");
+}
+
+function showMenu(id, x, y) {
+    const menu = document.getElementById(id);
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+    menu.classList.remove("hidden");
+}
+
+/* ============================================================
+   メニューのボタン動作
+============================================================ */
+document.getElementById("deleteMarkerBtn").onclick = () => {
+    if (!window.selectedMarker) return;
+    saveHistory();
+    markers = markers.filter(m => m !== window.selectedMarker);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateLeftBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle -= Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateRightBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle += Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowDeleteBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    arrows = arrows.filter(a => a !== window.selectedArrow);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("deleteTextBtn").onclick = () => {
+    if (!window.selectedText) return;
+    saveHistory();
+    texts = texts.filter(t => t !== window.selectedText);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+/* ============================================================
+   メニュー閉じる
+============================================================ */
+document.addEventListener("click", () => {
+    hideAllMenus();
+});
+
+/* ============================================================
+   初期状態
+============================================================ */
+updateUndoRedoButtons();
+drawCanvas();
+
+});
