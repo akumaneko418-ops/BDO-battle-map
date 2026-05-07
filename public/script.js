@@ -43,19 +43,27 @@ document.querySelectorAll(".colorOption").forEach(el => {
 document.getElementById("pink").classList.add("selectedColor");
 
 // =========================
-// マーカー描画（●＋名前）
+// マーカー描画（●＋名前＋強調表示）
 // =========================
 function drawMarkers() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   markers.forEach(m => {
-    // ●
+    // 強調表示（白い縁取り）
+    if (m.highlight) {
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 18, 0, Math.PI * 2);
+      ctx.fillStyle = "white";
+      ctx.fill();
+    }
+
+    // 本体
     ctx.beginPath();
     ctx.arc(m.x, m.y, 14, 0, Math.PI * 2);
     ctx.fillStyle = m.color;
     ctx.fill();
 
-    // 名前（ユーザー入力）
+    // 名前（空でもOK）
     ctx.fillStyle = "black";
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
@@ -84,17 +92,14 @@ canvas.addEventListener("click", (e) => {
     return;
   }
 
+  // ★ 未入力でもOK
   const label = document.getElementById("markerName").value.trim();
-  if (!label) {
-    alert("マーカー名を入力してください");
-    return;
-  }
 
   const newMarker = {
     x,
     y,
     color: selectedColor,
-    label
+    label // 空文字でもそのまま
   };
 
   socket.emit("addMarker", newMarker);
@@ -183,7 +188,7 @@ canvas.addEventListener("mousemove", (e) => {
       const canDelete = (c.nickname === document.getElementById("nickname").value);
 
       return `
-        <div style="color:${color}">
+        <div class="commentItem" data-marker-id="${marker._id}" style="color:${color}">
           [${new Date(c.timestamp).toLocaleTimeString()}] 
           <b>${c.nickname}</b>: ${c.message}
           ${canDelete ? `<span class="deleteBtn" onclick="deleteComment('${c._id}')">削除</span>` : ""}
@@ -191,6 +196,23 @@ canvas.addEventListener("mousemove", (e) => {
       `;
     })
     .join("");
+});
+
+// =========================
+// コメントにホバー → マーカー強調
+// =========================
+document.addEventListener("mousemove", (e) => {
+  const item = e.target.closest(".commentItem");
+
+  markers.forEach(m => m.highlight = false);
+
+  if (item) {
+    const markerId = item.dataset.markerId;
+    const target = markers.find(m => m._id === markerId);
+    if (target) target.highlight = true;
+  }
+
+  drawMarkers();
 });
 
 // =========================
@@ -265,3 +287,4 @@ socket.on("deleteComment", (id) => {
     markerComments[key] = markerComments[key].filter(c => c._id !== id);
   }
 });
+
