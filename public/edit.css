@@ -37,7 +37,7 @@ body {
 }
 
 .fileNameInput {
-    flex: 1;
+    flex: 0 0 75%;
     height: 32px;
     padding: 4px 8px;
     font-size: 14px;
@@ -51,7 +51,8 @@ body {
 .saveButton {
     background: #007bff;
     color: #fff;
-    font-weight: 700;
+    font-size:15px;
+   padding:10px 20px;
 }
 
 /* ============================================================
