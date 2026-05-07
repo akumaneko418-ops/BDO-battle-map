@@ -1,63 +1,308 @@
 /* ============================================================
-   矢印操作
+   初期設定
 ============================================================ */
-document.getElementById("arrowRotateBtn").onclick = () => {
-    const id = document.getElementById("arrowMenu").dataset.arrowId;
-    const a = arrows.find(x => x.id === id);
-    if (!a) return;
+const socket = io();
 
+let zoom = 1.0;
+let zoomStep = 0.1;
+
+const canvas = document.getElementById("mapCanvas");
+const ctx = canvas.getContext("2d");
+
+let backgroundImage = null;
+
+/* ============================================================
+   パン（ドラッグ移動）用
+============================================================ */
+let offsetX = 0;
+let offsetY = 0;
+let isPanning = false;
+let panStartX = 0;
+let panStartY = 0;
+
+/* ============================================================
+   データ構造
+============================================================ */
+let markers = [];
+let arrows = [];
+let texts = [];
+let penPaths = [];
+let markerComments = {};
+
+/* ============================================================
+   Undo / Redo
+============================================================ */
+let history = [];
+let redoHistory = [];
+
+function getCurrentState() {
+    return {
+        markers: JSON.parse(JSON.stringify(markers)),
+        arrows: JSON.parse(JSON.stringify(arrows)),
+        texts: JSON.parse(JSON.stringify(texts)),
+        penPaths: JSON.parse(JSON.stringify(penPaths)),
+        backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
+        zoom,
+        offsetX,
+        offsetY
+    };
+}
+
+function restoreState(state) {
+    markers = state.markers;
+    arrows = state.arrows;
+    texts = state.texts;
+    penPaths = state.penPaths;
+    zoom = state.zoom || 1;
+    offsetX = state.offsetX || 0;
+    offsetY = state.offsetY || 0;
+
+    if (state.backgroundImageSrc) {
+        const img = new Image();
+        img.onload = () => {
+            backgroundImage = img;
+            drawCanvas();
+        };
+        img.src = state.backgroundImageSrc;
+    } else {
+        backgroundImage = null;
+        drawCanvas();
+    }
+}
+
+function saveHistory() {
+    history.push(JSON.stringify(getCurrentState()));
+    if (history.length > 100) history.shift();
+    redoHistory = [];
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (history.length === 0) return;
+
+    const current = JSON.stringify(getCurrentState());
+    redoHistory.push(current);
+
+    const last = history.pop();
+    restoreState(JSON.parse(last));
+
+    updateUndoRedoButtons();
+}
+
+function redo() {
+    if (redoHistory.length === 0) return;
+
+    const current = JSON.stringify(getCurrentState());
+    history.push(current);
+
+    const next = redoHistory.pop();
+    restoreState(JSON.parse(next));
+
+    updateUndoRedoButtons();
+}
+
+function updateUndoRedoButtons() {
+    document.getElementById("undoBtn").classList.toggle("disabled", history.length === 0);
+    document.getElementById("redoBtn").classList.toggle("disabled", redoHistory.length === 0);
+}
+
+/* ============================================================
+   Undo / Redo ボタン（←これが無いと Undo が動かない）
+============================================================ */
+document.getElementById("undoBtn").onclick = () => undo();
+document.getElementById("redoBtn").onclick = () => redo();
+
+/* ============================================================
+   現在のツール
+============================================================ */
+let currentTool = "none";
+
+let currentMarkerColor = "#ff7eb9";
+let currentMarkerOpacity = 1.0;
+
+let currentArrowColor = "#ff7eb9";
+let currentArrowOpacity = 1.0;
+
+let currentTextColor = "#ff7eb9";
+let currentTextSize = 16;
+
+let penMode = false;
+let currentPenColor = "#ff7eb9";
+let currentPenWidth = 3;
+let currentPenOpacity = 1.0;
+
+let textAddMode = false;
+
+/* ============================================================
+   クリック座標（パン＋中央ズーム対応）
+============================================================ */
+function getCanvasClickPosition(e) {
+    const rect = canvas.getBoundingClientRect();
+
+    const rawX = e.clientX - rect.left - offsetX;
+    const rawY = e.clientY - rect.top - offsetY;
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    const x = (rawX - cx) / zoom + cx;
+    const y = (rawY - cy) / zoom + cy;
+
+    return { x, y };
+}
+
+/* ============================================================
+   テキスト入力
+============================================================ */
+let typing = false;
+let typingText = "";
+let typingX = 0;
+let typingY = 0;
+
+document.getElementById("addTextModeBtn").onclick = () => {
+    currentTool = "text";
+    textAddMode = !textAddMode;
+    penMode = false;
+};
+/* ======== ▲▲▲ Part 1 からの続き ▲▲▲ ======== */
+
+/* ============================================================
+   キャンバスクリック処理（currentTool で動作を統一）
+============================================================ */
+canvas.addEventListener("click", (e) => {
+    const { x, y } = getCanvasClickPosition(e);
+
+    // テキスト追加
+    if (currentTool === "text") {
+        typing = true;
+        typingText = "";
+        typingX = x;
+        typingY = y;
+        drawCanvas();
+        return;
+    }
+
+    // 砦マーカー
+    if (currentTool === "marker") {
+        saveHistory();
+        markers.push({
+            id: "marker_" + Date.now(),
+            x,
+            y,
+            name: document.getElementById("markerName").value,
+            color: currentMarkerColor,
+            opacity: currentMarkerOpacity
+        });
+        drawCanvas();
+        return;
+    }
+
+    // 矢印
+    if (currentTool === "arrow") {
+        saveHistory();
+        arrows.push({
+            id: "arrow_" + Date.now(),
+            x,
+            y,
+            angle: 0,
+            scale: 1,
+            color: currentArrowColor,
+            opacity: currentArrowOpacity
+        });
+        drawCanvas();
+        return;
+    }
+
+    // ペンは mousedown で処理するので click では何もしない
+});
+
+/* ============================================================
+   ペン描画
+============================================================ */
+let drawing = false;
+
+canvas.addEventListener("mousedown", (e) => {
+    if (currentTool === "pen") {
+        drawing = true;
+
+        const { x, y } = getCanvasClickPosition(e);
+
+        saveHistory();
+        penPaths.push({
+            points: [{ x, y }],
+            color: currentPenColor,
+            width: currentPenWidth,
+            opacity: currentPenOpacity
+        });
+    }
+
+    // パン開始
+    if (currentTool === "pan") {
+        isPanning = true;
+        panStartX = e.clientX - offsetX;
+        panStartY = e.clientY - offsetY;
+    }
+});
+
+canvas.addEventListener("mousemove", (e) => {
+    // ペン描画
+    if (currentTool === "pen" && drawing) {
+        const { x, y } = getCanvasClickPosition(e);
+        penPaths[penPaths.length - 1].points.push({ x, y });
+        drawCanvas();
+    }
+
+    // パン移動
+    if (isPanning) {
+        offsetX = e.clientX - panStartX;
+        offsetY = e.clientY - panStartY;
+        drawCanvas();
+    }
+});
+
+canvas.addEventListener("mouseup", () => {
+    drawing = false;
+    isPanning = false;
+});
+
+/* ============================================================
+   ズーム
+============================================================ */
+document.getElementById("zoomInBtn").onclick = () => {
     saveHistory();
-    a.angle += Math.PI / 6;
+    zoom += zoomStep;
     drawCanvas();
-
-    document.getElementById("arrowMenu").classList.add("hidden");
 };
 
-document.getElementById("arrowScaleUpBtn").onclick = () => {
-    const id = document.getElementById("arrowMenu").dataset.arrowId;
-    const a = arrows.find(x => x.id === id);
-    if (!a) return;
-
+document.getElementById("zoomOutBtn").onclick = () => {
     saveHistory();
-    a.scale *= 1.1;
+    zoom = Math.max(0.2, zoom - zoomStep);
     drawCanvas();
-
-    document.getElementById("arrowMenu").classList.add("hidden");
 };
 
-document.getElementById("arrowScaleDownBtn").onclick = () => {
-    const id = document.getElementById("arrowMenu").dataset.arrowId;
-    const a = arrows.find(x => x.id === id);
-    if (!a) return;
-
+document.getElementById("zoomResetBtn").onclick = () => {
     saveHistory();
-    a.scale *= 0.9;
+    zoom = 1.0;
     drawCanvas();
-
-    document.getElementById("arrowMenu").classList.add("hidden");
-};
-
-document.getElementById("arrowDeleteBtn").onclick = () => {
-    const id = document.getElementById("arrowMenu").dataset.arrowId;
-    saveHistory();
-    arrows = arrows.filter(a => a.id !== id);
-    drawCanvas();
-    document.getElementById("arrowMenu").classList.add("hidden");
 };
 
 /* ============================================================
-   描画処理（中央基準ズーム）
+   描画処理（パン＋中央基準ズーム）
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
 
-    // ★ 中央基準ズーム（ズレ修正済み）
+    // パン（ドラッグ移動）
+    ctx.translate(offsetX, offsetY);
+
+    // 中央基準ズーム
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
+    // 背景
     if (backgroundImage) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
@@ -96,7 +341,7 @@ function drawCanvas() {
 
         ctx.restore();
     });
-/* ======== ▲▲▲ Part 1 からの続き ▲▲▲ ======== */
+/* ======== ▲▲▲ Part 2 からの続き ▲▲▲ ======== */
 
 /* ===== 矢印スタンプ ===== */
 arrows.forEach(a => {
@@ -160,8 +405,6 @@ if (typing) {
 ctx.restore();
 }
 
-/* ======== ▲▲▲ Part 2 からの続き ▲▲▲ ======== */
-
 /* ============================================================
    画像ドラッグ＆ドロップ
 ============================================================ */
@@ -206,3 +449,5 @@ updateUndoRedoButtons();
 drawCanvas();
 
 /* ======== ★★★ Part 3 / 3（END） ★★★ ======== */
+
+
