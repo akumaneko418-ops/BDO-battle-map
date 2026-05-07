@@ -227,7 +227,7 @@ document.querySelectorAll(".penColorOption").forEach((el) => {
 });
 
 /* ============================================================
-   マーカー／矢印サイズスライダー
+   スライダー
 ============================================================ */
 document.getElementById("markerSizeSlider").addEventListener("input", (e) => {
     currentMarkerSize = Number(e.target.value);
@@ -237,9 +237,6 @@ document.getElementById("arrowSizeSlider").addEventListener("input", (e) => {
     currentArrowScale = Number(e.target.value);
 });
 
-/* ============================================================
-   不透明度・テキストサイズ・ペン幅スライダー
-============================================================ */
 document.getElementById("markerOpacitySlider").addEventListener("input", (e) => {
     currentMarkerOpacity = Number(e.target.value);
     document.getElementById("markerOpacityValue").textContent = currentMarkerOpacity.toFixed(2);
@@ -627,16 +624,16 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* テキスト */
+    /* テキスト（外側光彩＋ドロップシャドウ） */
     texts.forEach(t => {
         ctx.save();
 
         ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
         ctx.fillStyle = t.color;
 
-        ctx.shadowColor = "rgba(255,255,255,0.8)";
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetX = 2;
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 12;
+               ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
         ctx.fillText(t.text, t.x, t.y);
@@ -650,6 +647,11 @@ function drawCanvas() {
 
         ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
         ctx.fillStyle = currentTextColor;
+
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
 
         ctx.fillText(typingText, typingX, typingY);
 
@@ -699,7 +701,7 @@ document.body.addEventListener("drop", (e) => {
 });
 
 /* ============================================================
-   右クリックメニュー
+   ★ 右クリックメニュー
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -808,22 +810,10 @@ document.addEventListener("click", () => {
 });
 
 /* ============================================================
-   折りたたみ UI
-============================================================ */
-document.querySelectorAll(".fold-header").forEach(header => {
-    header.addEventListener("click", () => {
-        const content = header.nextElementSibling;
-        if (!content) return;
-        content.classList.toggle("hidden");
-        const icon = header.querySelector(".fold-icon");
-        if (icon) icon.textContent = content.classList.contains("hidden") ? "▶" : "▼";
-    });
-});
-
-/* ============================================================
    初期状態
 ============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
 
 });
+
