@@ -55,7 +55,7 @@ function drawMarkers() {
     ctx.fillStyle = m.color;
     ctx.fill();
 
-    // 名前（A/B/C…）
+    // 名前（ユーザー入力）
     ctx.fillStyle = "black";
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "center";
@@ -84,7 +84,11 @@ canvas.addEventListener("click", (e) => {
     return;
   }
 
-  const label = String.fromCharCode(65 + markers.length); // A,B,C...
+  const label = document.getElementById("markerName").value.trim();
+  if (!label) {
+    alert("マーカー名を入力してください");
+    return;
+  }
 
   const newMarker = {
     x,
