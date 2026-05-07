@@ -601,4 +601,14 @@ document.body.addEventListener("drop", (e) => {
 /* ============================================================
    メニュー閉じる
 ============================================================ */
-document.addEventListener("click", () => {
+document.addEventListener("click", () => {    document.getElementById("markerMenu").classList.add("hidden");
+    document.getElementById("textMenu").classList.add("hidden");
+    document.getElementById("arrowMenu").classList.add("hidden");
+});
+
+/* ============================================================
+   初期状態
+============================================================ */
+updateUndoRedoButtons();
+drawCanvas();
+
