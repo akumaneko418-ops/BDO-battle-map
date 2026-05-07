@@ -1,66 +1,67 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>画像編集</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>画像編集</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- 上段：タイトル入力 + 保存ボタン -->
-<div class="top-bar">
-  <input id="imageTitle" placeholder="編集画像の名前">
-  <button id="saveImageBtn">保存</button>
-</div>
-
-<!-- 下段：左右2分割 -->
-<div class="main-area">
-
-  <!-- 左：メインキャンバス（画像＋マーカー） -->
-  <div class="canvas-area">
-    <canvas id="mapCanvas" width="800" height="600"></canvas>
-  </div>
-
-  <!-- 右：ツールバー + コメント欄 -->
-  <div class="right-panel">
-
-    <!-- ツールバー -->
-    <div class="toolbar">
-      <h3>マーカー設定</h3>
-
-      <div class="markerNameInput">
-        <span>マーカー名：</span>
-        <input id="markerName">
-      </div>
-
-      <div class="colorPicker">
-        <span>色：</span>
-        <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
-        <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
-        <div id="yellow" class="colorOption" style="background:#fff47e"></div>
-      </div>
+    <!-- 上段：タイトル入力 + 保存ボタン -->
+    <div class="top-bar">
+        <input id="imageTitle" placeholder="編集画像の名前">
+        <button id="saveImageBtn">保存</button>
     </div>
 
-    <!-- コメント欄 -->
-    <div class="comment-area">
-      <h3>コメント</h3>
-      <input id="nickname" placeholder="ニックネーム">
-      <input id="message" placeholder="コメント">
-      <button id="sendBtn">送信</button>
+    <!-- 下段：左右2分割 -->
+    <div class="main-area">
+
+        <!-- 左：メインキャンバス（画像＋マーカー）-->
+        <div class="canvas-area">
+            <canvas id="mapCanvas" width="800" height="600"></canvas>
+        </div>
+
+        <!-- 右：ツールバー + コメント欄 -->
+        <div class="right-panel">
+
+            <!-- ツールバー -->
+            <div class="toolbar">
+                <h3>マーカー設定</h3>
+
+                <div class="markerNameInput">
+                    <span>マーカー名：</span>
+                    <input id="markerName" placeholder="例：A/B/C/D">
+                </div>
+
+                <div class="colorPicker">
+                    <span>色：</span>
+                    <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
+                    <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
+                    <div id="yellow" class="colorOption" style="background:#fff47e"></div>
+                </div>
+            </div>
+
+            <!-- コメント欄 -->
+            <div class="comment-area">
+                <h3>コメント</h3>
+                <input id="nickname" placeholder="ニックネーム">
+                <input id="message" placeholder="コメント">
+                <button id="sendBtn">送信</button>
+            </div>
+
+        </div>
     </div>
 
-  </div>
-</div>
+    <div id="tooltip"></div>
 
-<div id="tooltip"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="edit.js"></script>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="edit.js"></script>
-<!-- マーカー右クリックメニュー -->
-<div id="markerMenu" class="marker-menu hidden">
-  <div id="addCommentBtn">コメント追加</div>
-  <div id="deleteMarkerBtn">マーカー削除</div>
-</div>
+    <!-- マーカー右クリックメニュー -->
+    <div id="markerMenu" class="marker-menu hidden">
+        <div id="addCommentBtn">コメント追加</div>
+        <div id="deleteMarkerBtn">マーカー削除</div>
+    </div>
 
 </body>
 </html>
