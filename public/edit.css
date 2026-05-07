@@ -1,295 +1,121 @@
-/* ============================
-   全体レイアウト
-============================ */
 body {
     margin: 0;
     font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
-    background: #f5f5f5;
+    background: #f0f0f0;
 }
 
-.top-bar {
-    width: 100%;
-    height: 60px;
-    background: #333;
-    color: white;
+#toolbar {
     display: flex;
-    align-items: center;
-    padding-left: 20px;
-    box-sizing: border-box;
-}
-
-.main-container {
-    display: flex;
-    width: 100%;
-    height: calc(100vh - 120px);
-}
-
-/* ============================
-   キャンバス上部ツールバー
-============================ */
-.canvas-toolbar {
-    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
     background: #fff;
     border-bottom: 1px solid #ccc;
-    padding: 6px 10px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    box-sizing: border-box;
 }
 
-.canvas-toolbar button {
+#toolbar button {
     padding: 6px 10px;
+    border: 1px solid #aaa;
+    background: #fafafa;
     cursor: pointer;
-}
-
-/* ファイル名入力欄（タイトル級の存在感） */
-.fileNameInput {
-    font-size: 20px;
-    font-weight: bold;
-    padding: 6px 10px;
-    width: 260px;
-    border: 2px solid #666;
     border-radius: 4px;
 }
 
-#saveAllBtn {
-    margin-left: auto;
-    background: #0052CC;
-    color: #fff;
-    font-weight: bold;
-    padding: 6px 14px;
-    border-radius: 4px;
+#toolbar button:hover {
+    background: #e6e6e6;
 }
 
-button.disabled {
+#toolbar button.disabled {
     opacity: 0.4;
     pointer-events: none;
 }
 
-/* ============================
-   キャンバス領域
-============================ */
-.canvas-area {
-    flex: 1;
-    background: #ddd;
+.colorGroup,
+.arrowColorGroup,
+.textColorGroup,
+.penColorGroup {
     display: flex;
-    justify-content: center;
+    gap: 4px;
     align-items: center;
-    position: relative;
-    overflow: auto;
-}
-
-#mapCanvas {
-    background: white;
-    border: 1px solid #aaa;
-}
-
-/* ドラッグ＆ドロップ説明 */
-#dropHint {
-    position: absolute;
-    color: #999;
-    font-size: 22px;
-    pointer-events: none;
-    z-index: 10;
-}
-
-/* ============================
-   右パネル
-============================ */
-.right-panel {
-    width: 300px;
-    background: #fff;
-    border-left: 1px solid #ccc;
-    padding: 10px;
-    overflow-y: auto;
-    box-sizing: border-box;
-}
-
-/* ============================
-   折りたたみ UI
-============================ */
-.fold-header {
-    display: flex;
-    justify-content: space-between;
-    cursor: pointer;
-    margin-top: 15px;
-    margin-bottom: 8px;
-    user-select: none;
-}
-
-.fold-icon {
-    font-weight: bold;
-}
-
-.fold-content {
-    display: block;
-}
-
-.fold-content.hidden {
-    display: none;
-}
-
-/* ============================
-   help-icon（右パネル外に出す）
-============================ */
-.help-icon {
-    cursor: help;
-    font-weight: bold;
-    background: #ddd;
-    padding: 0 6px;
-    border-radius: 4px;
-    margin-left: 4px;
-}
-
-.global-help {
-    position: fixed !important;
-    z-index: 99999;
-    display: none;
-    background: #fff;
-    border: 1px solid #aaa;
-    padding: 6px 10px;
-    border-radius: 4px;
-    white-space: nowrap;
-}
-
-.help-wrapper {
-    position: static !important;
-}
-
-/* ============================
-   砦マーカー名入力欄
-============================ */
-.markerNameWrapper {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-/* ============================
-   カラー選択
-============================ */
-.colorPicker,
-.arrowColorPicker,
-.textColorPicker,
-.penColorPicker {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
 }
 
 .colorOption,
 .arrowColorOption,
 .textColorOption,
 .penColorOption {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 2px solid #666;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
     cursor: pointer;
+    border: 2px solid transparent;
 }
 
-.colorOption.selected,
-.arrowColorOption.selected,
-.textColorOption.selected,
-.penColorOption.selected {
-    border: 3px solid #000;
+.colorOption.active,
+.arrowColorOption.active,
+.textColorOption.active,
+.penColorOption.active {
+    border: 2px solid #000;
 }
 
-/* ============================
-   スライダー
-============================ */
-.opacityPicker,
-.arrowOpacityPicker,
-.penOpacityPicker,
-.textSizePicker {
-    margin-bottom: 12px;
-}
-
-.opacityPicker input,
-.arrowOpacityPicker input,
-.penOpacityPicker input,
-.textSizePicker input {
-    width: 150px;
-}
-
-#markerOpacityValue,
-#arrowOpacityValue,
-#penOpacityValue {
-    margin-left: 8px;
-    font-weight: bold;
-}
-
-/* ============================
-   テキスト追加
-============================ */
-.textAddButtonWrapper {
+.sliderGroup {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    gap: 4px;
+    margin-left: 10px;
+}
+
+#canvasWrapper {
     position: relative;
-}
-
-/* ============================
-   ペンツール
-============================ */
-.penWidthPicker {
-    margin-bottom: 10px;
-}
-
-#penModeBtn,
-#penClearBtn,
-#addTextModeBtn {
     width: 100%;
-    padding: 8px;
-    margin-bottom: 8px;
-    cursor: pointer;
+    height: calc(100vh - 90px);
+    overflow: auto;
+    background: #ddd;
 }
 
-/* ============================
-   コメント一覧
-============================ */
-#commentList {
-    background: #fafafa;
-    border: 1px solid #ccc;
-    padding: 8px;
-    height: 200px;
-    overflow-y: auto;
+#mapCanvas {
+    background: #fff;
+    display: block;
+    margin: 0 auto;
 }
 
-.commentItem {
-    padding: 4px;
-    border-bottom: 1px solid #ddd;
-    cursor: pointer;
-}
-
-.commentItem:hover {
-    background: #eee;
-}
-
-/* ============================
-   右クリックメニュー
-============================ */
-.contextMenu {
+#dropHint {
     position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+/* ============================================================
+   右クリックメニュー
+============================================================ */
+.contextMenu {
+    position: fixed;
     background: #fff;
     border: 1px solid #aaa;
-    padding: 5px 0;
+    border-radius: 4px;
+    padding: 4px;
     z-index: 9999;
-    width: 140px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 
-.contextMenu div {
+.contextMenu.hidden {
+    display: none;
+}
+
+.contextMenu button {
+    display: block;
+    width: 100%;
     padding: 6px 10px;
+    border: none;
+    background: #fff;
+    text-align: left;
     cursor: pointer;
 }
 
-.contextMenu div:hover {
+.contextMenu button:hover {
     background: #eee;
-}
-
-.hidden {
-    display: none;
 }
