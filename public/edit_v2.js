@@ -83,45 +83,37 @@ function broadcastState() {
 
 socket.on("edit_state", (state) => {
     restoreState(state);
-    // restoreState 内で drawCanvas 済み
 });
 
-function undo() {
+/* ============================================================
+   Undo / Redo ボタン
+============================================================ */
+document.getElementById("undoBtn").onclick = () => {
     if (history.length === 0) return;
-
     const current = JSON.stringify(getCurrentState());
     redoHistory.push(current);
 
     const last = history.pop();
     restoreState(JSON.parse(last));
-
     updateUndoRedoButtons();
     broadcastState();
-}
+};
 
-function redo() {
+document.getElementById("redoBtn").onclick = () => {
     if (redoHistory.length === 0) return;
-
     const current = JSON.stringify(getCurrentState());
     history.push(current);
 
     const next = redoHistory.pop();
     restoreState(JSON.parse(next));
-
     updateUndoRedoButtons();
     broadcastState();
-}
+};
 
 function updateUndoRedoButtons() {
     document.getElementById("undoBtn").classList.toggle("disabled", history.length === 0);
     document.getElementById("redoBtn").classList.toggle("disabled", redoHistory.length === 0);
 }
-
-/* ============================================================
-   Undo / Redo ボタン
-============================================================ */
-document.getElementById("undoBtn").onclick = () => undo();
-document.getElementById("redoBtn").onclick = () => redo();
 
 /* ============================================================
    現在のツール
@@ -145,15 +137,15 @@ let currentPenOpacity = 1.0;
 let textAddMode = false;
 
 /* ============================================================
-   ツールバーのボタン紐付け
+   ツール切替（edit.html に完全対応）
 ============================================================ */
-document.getElementById("markerSection").onclick = () => {
+document.getElementById("markerModeBtn").onclick = () => {
     currentTool = "marker";
     penMode = false;
     textAddMode = false;
 };
 
-document.getElementById("arrowSection").onclick = () => {
+document.getElementById("arrowModeBtn").onclick = () => {
     currentTool = "arrow";
     penMode = false;
     textAddMode = false;
@@ -204,7 +196,7 @@ let typingX = 0;
 let typingY = 0;
 
 /* ============================================================
-   キャンバスクリック処理（currentTool で動作を統一）
+   キャンバスクリック処理
 ============================================================ */
 canvas.addEventListener("click", (e) => {
     const { x, y } = getCanvasClickPosition(e);
@@ -220,7 +212,7 @@ canvas.addEventListener("click", (e) => {
         return;
     }
 
-    // 砦マーカー
+    // マーカー追加
     if (currentTool === "marker") {
         saveHistory();
         markers.push({
@@ -236,7 +228,7 @@ canvas.addEventListener("click", (e) => {
         return;
     }
 
-    // 矢印
+    // 矢印追加
     if (currentTool === "arrow") {
         saveHistory();
         arrows.push({
@@ -252,8 +244,6 @@ canvas.addEventListener("click", (e) => {
         broadcastState();
         return;
     }
-
-    // ペンは mousedown で処理するので click では何もしない
 });
 
 /* ======== ▼▼▼ Part 2 に続く ▼▼▼ ======== */
@@ -285,7 +275,7 @@ function hitTestArrow(x, y) {
 }
 
 /* ============================================================
-   ペン描画
+   ペン描画・ドラッグ・パン
 ============================================================ */
 let drawing = false;
 
@@ -319,7 +309,6 @@ canvas.addEventListener("mousedown", (e) => {
     // ペン描画開始
     if (currentTool === "pen") {
         drawing = true;
-
         saveHistory();
         penPaths.push({
             points: [{ x, y }],
@@ -438,7 +427,7 @@ function drawCanvas() {
 
     ctx.save();
 
-    // パン（ドラッグ移動）
+    // パン
     ctx.translate(offsetX, offsetY);
 
     // 中央基準ズーム
@@ -469,7 +458,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ===== 砦マーカー ===== */
+    /* ===== マーカー ===== */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -489,7 +478,7 @@ function drawCanvas() {
 /* ======== ▼▼▼ Part 3 に続く ▼▼▼ ======== */
 /* ======== ▲▲▲ Part 2 からの続き ▲▲▲ ======== */
 
-/* ===== 矢印スタンプ ===== */
+/* ===== 矢印 ===== */
 arrows.forEach(a => {
     ctx.save();
     ctx.translate(a.x, a.y);
@@ -509,7 +498,7 @@ arrows.forEach(a => {
     ctx.restore();
 });
 
-/* ===== テキスト描画 ===== */
+/* ===== テキスト ===== */
 texts.forEach(t => {
     ctx.save();
 
