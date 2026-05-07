@@ -1,3 +1,5 @@
+document.addEventListener("DOMContentLoaded", () => {
+
 /* ============================================================
    初期設定
 ============================================================ */
@@ -116,7 +118,7 @@ function updateUndoRedoButtons() {
 }
 
 /* ============================================================
-   現在のツール・状態
+   現在のツール
 ============================================================ */
 let currentTool = "none";
 
@@ -147,7 +149,7 @@ document.getElementById("penClearBtn").onclick = () => {
 };
 
 /* ============================================================
-   ツール切替（edit.html に完全対応）
+   ツール切替
 ============================================================ */
 document.getElementById("markerModeBtn").onclick = () => {
     currentTool = "marker";
@@ -162,7 +164,6 @@ document.getElementById("arrowModeBtn").onclick = () => {
 };
 
 document.getElementById("penModeBtn").onclick = () => {
-    // トグル動作にする
     if (currentTool === "pen") {
         currentTool = "none";
         penMode = false;
@@ -186,74 +187,36 @@ document.getElementById("panModeBtn").onclick = () => {
 };
 
 /* ============================================================
-   カラーピッカー・スライダー類
+   カラーピッカー
 ============================================================ */
-// 砦マーカー色
 document.querySelectorAll(".colorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentMarkerColor = getComputedStyle(el).backgroundColor;
+        currentTool = "marker";
     });
 });
 
-// 砦マーカー透明度
-const markerOpacityInput = document.getElementById("markerOpacity");
-const markerOpacityValue = document.getElementById("markerOpacityValue");
-markerOpacityInput.addEventListener("input", () => {
-    currentMarkerOpacity = parseFloat(markerOpacityInput.value);
-    markerOpacityValue.textContent = currentMarkerOpacity.toFixed(2);
-});
-
-// 矢印色
 document.querySelectorAll(".arrowColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentArrowColor = getComputedStyle(el).backgroundColor;
+        currentTool = "arrow";
     });
 });
 
-// 矢印透明度
-const arrowOpacityInput = document.getElementById("arrowOpacity");
-const arrowOpacityValue = document.getElementById("arrowOpacityValue");
-arrowOpacityInput.addEventListener("input", () => {
-    currentArrowOpacity = parseFloat(arrowOpacityInput.value);
-    arrowOpacityValue.textContent = currentArrowOpacity.toFixed(2);
-});
-
-// テキスト色
 document.querySelectorAll(".textColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentTextColor = getComputedStyle(el).backgroundColor;
     });
 });
 
-// テキストサイズ
-const textSizeInput = document.getElementById("textSize");
-textSizeInput.addEventListener("input", () => {
-    currentTextSize = parseInt(textSizeInput.value, 10);
-});
-
-// ペン色
 document.querySelectorAll(".penColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentPenColor = getComputedStyle(el).backgroundColor;
     });
 });
 
-// ペン太さ
-const penWidthSelect = document.getElementById("penWidth");
-penWidthSelect.addEventListener("change", () => {
-    currentPenWidth = parseInt(penWidthSelect.value, 10);
-});
-
-// ペン透明度
-const penOpacityInput = document.getElementById("penOpacity");
-const penOpacityValue = document.getElementById("penOpacityValue");
-penOpacityInput.addEventListener("input", () => {
-    currentPenOpacity = parseFloat(penOpacityInput.value);
-    penOpacityValue.textContent = currentPenOpacity.toFixed(2);
-});
-
 /* ============================================================
-   クリック座標（パン＋中央ズーム対応）
+   クリック座標
 ============================================================ */
 function getCanvasClickPosition(e) {
     const rect = canvas.getBoundingClientRect();
@@ -282,7 +245,6 @@ document.addEventListener("keydown", (e) => {
     if (!typing) return;
 
     if (e.key === "Enter") {
-        // 確定
         if (typingText.trim() !== "") {
             saveHistory();
             texts.push({
@@ -334,7 +296,6 @@ document.addEventListener("keydown", (e) => {
 canvas.addEventListener("click", (e) => {
     const { x, y } = getCanvasClickPosition(e);
 
-    // テキスト追加
     if (currentTool === "text") {
         typing = true;
         typingText = "";
@@ -345,7 +306,6 @@ canvas.addEventListener("click", (e) => {
         return;
     }
 
-    // マーカー追加
     if (currentTool === "marker") {
         saveHistory();
         markers.push({
@@ -361,7 +321,6 @@ canvas.addEventListener("click", (e) => {
         return;
     }
 
-    // 矢印追加
     if (currentTool === "arrow") {
         saveHistory();
         arrows.push({
@@ -380,7 +339,7 @@ canvas.addEventListener("click", (e) => {
 });
 
 /* ============================================================
-   マーカー／矢印ドラッグ用
+   マーカー／矢印ドラッグ
 ============================================================ */
 let draggingMarker = null;
 let draggingArrow = null;
@@ -412,7 +371,6 @@ let drawing = false;
 canvas.addEventListener("mousedown", (e) => {
     const { x, y } = getCanvasClickPosition(e);
 
-    // マーカーのドラッグ開始
     if (currentTool === "marker") {
         const hit = hitTestMarker(x, y);
         if (hit) {
@@ -424,7 +382,6 @@ canvas.addEventListener("mousedown", (e) => {
         }
     }
 
-    // 矢印のドラッグ開始
     if (currentTool === "arrow") {
         const hit = hitTestArrow(x, y);
         if (hit) {
@@ -436,7 +393,6 @@ canvas.addEventListener("mousedown", (e) => {
         }
     }
 
-    // ペン描画開始
     if (currentTool === "pen") {
         drawing = true;
         saveHistory();
@@ -449,23 +405,19 @@ canvas.addEventListener("mousedown", (e) => {
         return;
     }
 
-// パン開始
-if (currentTool === "pan") {
-    isPanning = true;
-    panStartX = e.clientX - offsetX;
-    panStartY = e.clientY - offsetY;
-    return;   // ★★★ これが絶対に必要 ★★★
-}
+    if (currentTool === "pan") {
+        isPanning = true;
+        panStartX = e.clientX - offsetX;
+        panStartY = e.clientY - offsetY;
+        return;
+    }
 
-// ★★★ どのツールにも該当しなかった場合も return ★★★
-return;
-
+    return;
 });
 
 canvas.addEventListener("mousemove", (e) => {
     const { x, y } = getCanvasClickPosition(e);
 
-    // マーカー移動
     if (draggingMarker) {
         draggingMarker.x = x - dragOffsetX;
         draggingMarker.y = y - dragOffsetY;
@@ -473,7 +425,6 @@ canvas.addEventListener("mousemove", (e) => {
         return;
     }
 
-    // 矢印移動
     if (draggingArrow) {
         draggingArrow.x = x - dragOffsetX;
         draggingArrow.y = y - dragOffsetY;
@@ -481,14 +432,12 @@ canvas.addEventListener("mousemove", (e) => {
         return;
     }
 
-    // ペン描画
     if (currentTool === "pen" && drawing) {
         penPaths[penPaths.length - 1].points.push({ x, y });
         drawCanvas();
         return;
     }
 
-    // パン移動
     if (isPanning) {
         offsetX = e.clientX - panStartX;
         offsetY = e.clientY - panStartY;
@@ -555,27 +504,23 @@ document.getElementById("exportPngBtn").onclick = () => {
 };
 
 /* ============================================================
-   描画処理（パン＋中央基準ズーム）
+   描画処理
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
 
-    // パン
     ctx.translate(offsetX, offsetY);
 
-    // 中央基準ズーム
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-    // 背景
     if (backgroundImage) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
 
-    /* ===== ペン描画 ===== */
     penPaths.forEach(path => {
         ctx.save();
         ctx.strokeStyle = path.color;
@@ -593,7 +538,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ===== マーカー ===== */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -610,7 +554,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ===== 矢印 ===== */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -630,7 +573,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ===== テキスト ===== */
     texts.forEach(t => {
         ctx.save();
 
@@ -647,7 +589,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ===== テキスト入力中カーソル ===== */
     if (typing) {
         ctx.save();
 
@@ -702,7 +643,7 @@ document.body.addEventListener("drop", (e) => {
 });
 
 /* ============================================================
-   メニュー閉じる（今は単に全部閉じるだけ）
+   メニュー閉じる
 ============================================================ */
 document.addEventListener("click", () => {
     document.getElementById("markerMenu").classList.add("hidden");
@@ -715,3 +656,5 @@ document.addEventListener("click", () => {
 ============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
+
+});
