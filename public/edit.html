@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <title>画像編集</title>
 
-    <!-- style.css は存在しないので削除（404防止） -->
-    <!-- <link rel="stylesheet" href="/style.css"> -->
-
+    <!-- style.css は存在しないので削除済み -->
     <link rel="stylesheet" href="/edit.css">
 </head>
 <body>
@@ -32,29 +30,21 @@
             <div class="toolbar">
                 <h3>マーカー設定</h3>
 
+                <!-- ？ボタンの位置を左に移動 -->
                 <div class="markerNameInput">
-                    <span>マーカー名：</span>
-                    <span class="help-icon" data-help="マーカーの中に表示される名前です（例：A/B/C/D）">?</span>
+                    <span>マーカー名？：</span>
                     <input id="markerName" placeholder="例：A/B/C/D">
                 </div>
 
+                <!-- 色選択（？ボタン位置修正） -->
                 <div class="colorPicker">
-                    <span>色：</span>
-                    <span class="help-icon" data-help="マーカーの色を選びます">?</span>
+                    <span>色？：</span>
                     <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
                     <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
                     <div id="yellow" class="colorOption" style="background:#fff47e"></div>
                 </div>
 
-                <div class="saveHelp">
-                    <span>保存：</span>
-                    <span class="help-icon" data-help="現在のマップを画像として保存します">?</span>
-                </div>
-
-                <div class="backHelp">
-                    <span>一覧：</span>
-                    <span class="help-icon" data-help="保存済みマップの一覧に戻ります">?</span>
-                </div>
+                <!-- 保存：と一覧：は完全削除済み -->
             </div>
 
             <!-- コメント欄 -->
@@ -79,7 +69,7 @@
         <div id="deleteMarkerBtn">マーカー削除</div>
     </div>
 
-    <!-- ★★★ 方法A：script を DOM の最後に移動 ★★★ -->
+    <!-- ★ DOM の最後に script を移動（null エラー防止） -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="/edit_v2.js"></script>
 
