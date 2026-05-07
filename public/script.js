@@ -7,7 +7,9 @@ let markers = [];
 let markerComments = {};
 let currentMarkerId = null;
 
+// =========================
 // ニックネーム → 色
+// =========================
 const nameColors = {};
 
 function getColorForName(name) {
@@ -25,7 +27,9 @@ function getColorForName(name) {
   return color;
 }
 
-// ★ マーカー色選択
+// =========================
+// マーカー色選択
+// =========================
 let selectedColor = "#ff7eb9"; // 初期はピンク
 
 document.querySelectorAll(".colorOption").forEach(el => {
@@ -36,12 +40,14 @@ document.querySelectorAll(".colorOption").forEach(el => {
   });
 });
 
-// 初期選択
 document.getElementById("pink").classList.add("selectedColor");
 
+// =========================
 // マーカー描画
+// =========================
 function drawMarkers() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   markers.forEach(m => {
     ctx.beginPath();
     ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
@@ -50,20 +56,26 @@ function drawMarkers() {
   });
 }
 
-// ★ キャンバスクリック → マーカー追加
+// =========================
+// マーカー判定
+// =========================
+function getMarkerAt(x, y) {
+  return markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
+}
+
+// =========================
+// マーカー追加（左クリック）
+// =========================
 canvas.addEventListener("click", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
 
-  // 既存マーカー選択
-  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
+  const marker = getMarkerAt(x, y);
   if (marker) {
     currentMarkerId = marker.id;
-    console.log("選択中のマーカー:", currentMarkerId);
     return;
   }
 
-  // 新規マーカー作成
   const id = "m" + (markers.length + 1);
 
   markers.push({
@@ -77,12 +89,65 @@ canvas.addEventListener("click", (e) => {
   drawMarkers();
 });
 
-// ホバーでコメント表示
-canvas.addEventListener("mousemove", (e) => {
+// =========================
+// マーカー削除（右クリック）
+// =========================
+canvas.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+
   const x = e.offsetX;
   const y = e.offsetY;
 
-  const marker = markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
+  const marker = getMarkerAt(x, y);
+  if (!marker) return;
+
+  markers = markers.filter(m => m.id !== marker.id);
+  delete markerComments[marker.id];
+
+  drawMarkers();
+});
+
+// =========================
+// マーカー移動（ドラッグ）
+// =========================
+let dragging = false;
+let dragTarget = null;
+
+canvas.addEventListener("mousedown", (e) => {
+  const x = e.offsetX;
+  const y = e.offsetY;
+
+  const marker = getMarkerAt(x, y);
+  if (marker) {
+    dragging = true;
+    dragTarget = marker;
+  }
+});
+
+canvas.addEventListener("mousemove", (e) => {
+  if (!dragging || !dragTarget) return;
+
+  dragTarget.x = e.offsetX;
+  dragTarget.y = e.offsetY;
+
+  drawMarkers();
+});
+
+canvas.addEventListener("mouseup", () => {
+  dragging = false;
+  dragTarget = null;
+});
+
+// =========================
+// コメント表示（ホバー）
+// =========================
+canvas.addEventListener("mousemove", (e) => {
+  if (dragging) return;
+
+  const x = e.offsetX;
+  const y = e.offsetY;
+
+  const marker = getMarkerAt(x, y);
   const tooltip = document.getElementById("tooltip");
 
   if (!marker) {
@@ -112,11 +177,16 @@ canvas.addEventListener("mousemove", (e) => {
     .join("");
 });
 
+// =========================
 // コメント削除
+// =========================
 function deleteComment(id) {
   socket.emit("deleteComment", id);
 }
 
+// =========================
+// コメント送信
+// =========================
 document.getElementById("sendBtn").addEventListener("click", () => {
   const nickname = document.getElementById("nickname").value;
   const message = document.getElementById("message").value;
@@ -137,6 +207,9 @@ document.getElementById("sendBtn").addEventListener("click", () => {
   document.getElementById("message").value = "";
 });
 
+// =========================
+// Socket.IO
+// =========================
 socket.on("pastComments", (grouped) => {
   markerComments = grouped;
 });
@@ -152,8 +225,9 @@ socket.on("deleteComment", (id) => {
   }
 });
 
-// 初期マーカーなし
+// =========================
+// 初期状態
+// =========================
 markers = [];
 drawMarkers();
-
 
