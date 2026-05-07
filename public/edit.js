@@ -159,6 +159,18 @@ canvas.addEventListener("contextmenu", (e) => {
     menu.dataset.markerId = marker._id;
 });
 
+// 右クリックメニュー内のイベントをキャンバスに伝播させない
+(function () {
+    const menu = document.getElementById("markerMenu");
+    if (menu) {
+        ["mousedown", "mouseup", "click"].forEach(ev => {
+            menu.addEventListener(ev, (e) => {
+                e.stopPropagation();
+            });
+        });
+    }
+})();
+
 document.addEventListener("click", () => {
     document.getElementById("markerMenu").classList.add("hidden");
 });
@@ -184,6 +196,8 @@ document.getElementById("deleteMarkerBtn").onclick = () => {
 // キャンバス操作
 // =========================
 canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 2) return; // 右クリックは無視
+
     if (!imageLoaded) {
         alert("先に画像を追加してください");
         return;
@@ -251,7 +265,9 @@ canvas.addEventListener("mousemove", (e) => {
         .join("");
 });
 
-canvas.addEventListener("mouseup", () => {
+canvas.addEventListener("mouseup", (e) => {
+    if (e.button === 2) return; // 右クリックは無視
+
     if (dragTarget) {
         socket.emit("moveMarker", {
             _id: dragTarget._id,
