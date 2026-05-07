@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>画像編集</title>
-    <link rel="stylesheet" href="/style.css">
+
+    <!-- style.css は存在しないので削除（404防止） -->
+    <!-- <link rel="stylesheet" href="/style.css"> -->
+
     <link rel="stylesheet" href="/edit.css">
 </head>
 <body>
@@ -70,15 +73,15 @@
     <!-- ? ホバー説明用ツールチップ -->
     <div id="helpTooltip" class="help-tooltip hidden"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
-   <script src="/edit_v2.js"></script>
-
-
     <!-- マーカー右クリックメニュー -->
     <div id="markerMenu" class="marker-menu hidden">
         <div id="addCommentBtn">コメント追加</div>
         <div id="deleteMarkerBtn">マーカー削除</div>
     </div>
+
+    <!-- ★★★ 方法A：script を DOM の最後に移動 ★★★ -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/edit_v2.js"></script>
 
     <script>
         document.querySelectorAll(".help-icon").forEach(icon => {
