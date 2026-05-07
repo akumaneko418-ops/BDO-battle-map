@@ -18,8 +18,14 @@ app.use(express.static(path.join(__dirname, "public")));
 io.on("connection", (socket) => {
   console.log("ユーザー接続:", socket.id);
 
+  // 描画イベント
   socket.on("draw", (data) => {
     socket.broadcast.emit("draw", data);
+  });
+
+  // コメント受信 → 全員に配信
+  socket.on("chat", (data) => {
+    io.emit("chat", data);
   });
 
   socket.on("disconnect", () => {
