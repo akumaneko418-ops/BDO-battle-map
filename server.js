@@ -1,7 +1,7 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -18,43 +18,67 @@ const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri);
 
 let commentsCollection;
+let markersCollection;
 
 async function start() {
   await client.connect();
   const db = client.db("bdo");
+
   commentsCollection = db.collection("comments");
+  markersCollection = db.collection("markers");
 
   console.log("MongoDB connected");
 
   io.on("connection", async (socket) => {
     console.log("ユーザー接続:", socket.id);
 
-    try {
-      const comments = await commentsCollection.find().toArray();
+    // --- マーカー送信 ---
+    const markers = await markersCollection.find().toArray();
+    socket.emit("loadMarkers", markers);
 
-      // マーカーIDごとにグループ化
-      const grouped = {};
-      for (const c of comments) {
-        if (!grouped[c.markerId]) grouped[c.markerId] = [];
-        grouped[c.markerId].push(c);
-      }
-
-      socket.emit("pastComments", grouped);
-    } catch (err) {
-      console.error("Failed to load past comments:", err);
+    // --- コメント送信 ---
+    const comments = await commentsCollection.find().toArray();
+    const grouped = {};
+    for (const c of comments) {
+      if (!grouped[c.markerId]) grouped[c.markerId] = [];
+      grouped[c.markerId].push(c);
     }
+    socket.emit("pastComments", grouped);
 
-    socket.on("chat", async (data) => {
-      try {
-        await commentsCollection.insertOne(data);
-        io.emit("chat", data);
-      } catch (err) {
-        console.error("Failed to save comment:", err);
-      }
+    // --- マーカー追加 ---
+    socket.on("addMarker", async (marker) => {
+      const result = await markersCollection.insertOne(marker);
+      marker._id = result.insertedId;
+      io.emit("addMarker", marker);
     });
 
-    socket.on("disconnect", () => {
-      console.log("ユーザー切断:", socket.id);
+    // --- マーカー移動 ---
+    socket.on("moveMarker", async (data) => {
+      await markersCollection.updateOne(
+        { _id: new ObjectId(data._id) },
+        { $set: { x: data.x, y: data.y } }
+      );
+      io.emit("moveMarker", data);
+    });
+
+    // --- マーカー削除 ---
+    socket.on("deleteMarker", async (id) => {
+      await markersCollection.deleteOne({ _id: new ObjectId(id) });
+      await commentsCollection.deleteMany({ markerId: id });
+      io.emit("deleteMarker", id);
+    });
+
+    // --- コメント追加 ---
+    socket.on("chat", async (data) => {
+      const result = await commentsCollection.insertOne(data);
+      data._id = result.insertedId;
+      io.emit("chat", data);
+    });
+
+    // --- コメント削除 ---
+    socket.on("deleteComment", async (id) => {
+      await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+      io.emit("deleteComment", id);
     });
   });
 
@@ -65,4 +89,5 @@ async function start() {
 }
 
 start();
+
 
