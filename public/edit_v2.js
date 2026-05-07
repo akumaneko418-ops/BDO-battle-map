@@ -13,23 +13,20 @@ const ctx = canvas.getContext("2d");
 
 let backgroundImage = null;
 
-/* ============================================================
-   パン（ドラッグ移動）用
-============================================================ */
+/* パン用 */
 let offsetX = 0;
 let offsetY = 0;
 let isPanning = false;
 let panStartX = 0;
 let panStartY = 0;
 
-/* ============================================================
-   データ構造
-============================================================ */
+/* データ構造 */
 let markers = [];
 let arrows = [];
 let texts = [];
 let penPaths = [];
 let markerComments = {};
+let highlightedMarkerId = null;
 
 /* ============================================================
    Undo / Redo
@@ -46,7 +43,8 @@ function getCurrentState() {
         backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
         zoom,
         offsetX,
-        offsetY
+        offsetY,
+        markerComments: JSON.parse(JSON.stringify(markerComments))
     };
 }
 
@@ -58,17 +56,20 @@ function restoreState(state) {
     zoom = state.zoom || 1;
     offsetX = state.offsetX || 0;
     offsetY = state.offsetY || 0;
+    markerComments = state.markerComments || {};
 
     if (state.backgroundImageSrc) {
         const img = new Image();
         img.onload = () => {
             backgroundImage = img;
             drawCanvas();
+            updateCommentList();
         };
         img.src = state.backgroundImageSrc;
     } else {
         backgroundImage = null;
         drawCanvas();
+        updateCommentList();
     }
 }
 
@@ -87,9 +88,7 @@ socket.on("edit_state", (state) => {
     restoreState(state);
 });
 
-/* ============================================================
-   Undo / Redo ボタン
-============================================================ */
+/* Undo / Redo ボタン */
 document.getElementById("undoBtn").onclick = () => {
     if (history.length === 0) return;
     const current = JSON.stringify(getCurrentState());
@@ -140,9 +139,7 @@ let currentPenOpacity = 1.0;
 
 let textAddMode = false;
 
-/* ============================================================
-   ペンのクリア
-============================================================ */
+/* ペンのクリア */
 document.getElementById("penClearBtn").onclick = () => {
     saveHistory();
     penPaths = [];
@@ -150,9 +147,7 @@ document.getElementById("penClearBtn").onclick = () => {
     broadcastState();
 };
 
-/* ============================================================
-   ツール切替
-============================================================ */
+/* ツール切替 */
 document.getElementById("markerModeBtn").onclick = () => {
     currentTool = "marker";
     penMode = false;
@@ -189,40 +184,54 @@ document.getElementById("panModeBtn").onclick = () => {
 };
 
 /* ============================================================
-   カラーピッカー（selected クラス付与）
+   カラーピッカー（最新選択を優先）
 ============================================================ */
 function activateColor(el, selector) {
     document.querySelectorAll(selector).forEach(btn => btn.classList.remove("selected"));
     el.classList.add("selected");
 }
 
+/* 砦マーカー色 */
 document.querySelectorAll(".colorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentMarkerColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".colorOption");
         currentTool = "marker";
+        penMode = false;
+        textAddMode = false;
     });
 });
 
+/* 矢印色 */
 document.querySelectorAll(".arrowColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentArrowColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".arrowColorOption");
         currentTool = "arrow";
+        penMode = false;
+        textAddMode = false;
     });
 });
 
+/* テキスト色 */
 document.querySelectorAll(".textColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentTextColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".textColorOption");
+        currentTool = "text";
+        textAddMode = true;
+        penMode = false;
     });
 });
 
+/* ペン色 */
 document.querySelectorAll(".penColorOption").forEach((el) => {
     el.addEventListener("click", () => {
         currentPenColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".penColorOption");
+        currentTool = "pen";
+        penMode = true;
+        textAddMode = false;
     });
 });
 
@@ -364,6 +373,7 @@ canvas.addEventListener("click", (e) => {
         });
         drawCanvas();
         broadcastState();
+        updateCommentList();
         return;
     }
 
@@ -503,6 +513,7 @@ canvas.addEventListener("mouseup", () => {
     if (changed) {
         drawCanvas();
         broadcastState();
+        updateCommentList();
     }
 });
 
@@ -533,7 +544,7 @@ document.getElementById("zoomResetBtn").onclick = () => {
 /* ============================================================
    PNG 書き出し
 ============================================================ */
-document.getElementById("exportPngBtn").onclick = () => {
+document.getElementById("exportPngBtn")?.addEventListener("click", () => {
     canvas.toBlob((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -545,7 +556,7 @@ document.getElementById("exportPngBtn").onclick = () => {
         a.remove();
         URL.revokeObjectURL(url);
     });
-};
+});
 
 /* ============================================================
    描画処理
@@ -600,6 +611,20 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* 強調表示中のマーカー */
+    if (highlightedMarkerId) {
+        const m = markers.find(mm => mm.id === highlightedMarkerId);
+        if (m) {
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, (m.size || 10) + 12, 0, Math.PI * 2);
+            ctx.fillStyle = m.color;
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
     /* 矢印（↑デザイン） */
     arrows.forEach(a => {
         ctx.save();
@@ -633,7 +658,7 @@ function drawCanvas() {
 
         ctx.shadowColor = "rgba(255,255,255,0.9)";
         ctx.shadowBlur = 12;
-               ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 2;
 
         ctx.fillText(t.text, t.x, t.y);
@@ -761,8 +786,10 @@ document.getElementById("deleteMarkerBtn").onclick = () => {
     if (!window.selectedMarker) return;
     saveHistory();
     markers = markers.filter(m => m !== window.selectedMarker);
+    delete markerComments[window.selectedMarker.id];
     hideAllMenus();
     drawCanvas();
+    updateCommentList();
     broadcastState();
 };
 
@@ -802,6 +829,62 @@ document.getElementById("deleteTextBtn").onclick = () => {
     broadcastState();
 };
 
+/* コメント追加 */
+document.getElementById("addCommentBtn").onclick = () => {
+    if (!window.selectedMarker) return;
+
+    const text = prompt("コメントを入力してください：");
+    if (!text) return;
+
+    const m = window.selectedMarker;
+
+    if (!markerComments[m.id]) markerComments[m.id] = [];
+    markerComments[m.id].push(text);
+
+    updateCommentList();
+    hideAllMenus();
+};
+
+/* コメント欄更新 */
+function updateCommentList() {
+    const list = document.getElementById("commentList");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    markers.forEach(m => {
+        const comments = markerComments[m.id];
+        if (!comments) return;
+
+        comments.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "commentItem";
+
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "markerName";
+            nameSpan.textContent = m.name || "(無名)";
+            nameSpan.style.color = m.color;
+
+            const textSpan = document.createElement("span");
+            textSpan.textContent = "：" + c;
+
+            nameSpan.addEventListener("mouseenter", () => {
+                highlightedMarkerId = m.id;
+                drawCanvas();
+            });
+
+            nameSpan.addEventListener("mouseleave", () => {
+                highlightedMarkerId = null;
+                drawCanvas();
+            });
+
+            div.appendChild(nameSpan);
+            div.appendChild(textSpan);
+            list.appendChild(div);
+        });
+    });
+}
+
 /* ============================================================
    メニュー閉じる
 ============================================================ */
@@ -810,10 +893,31 @@ document.addEventListener("click", () => {
 });
 
 /* ============================================================
+   折り畳み UI
+============================================================ */
+document.querySelectorAll(".fold-header").forEach(header => {
+    header.addEventListener("click", (e) => {
+        // ツールチャンネルのクリックで中身を開閉
+        // tooltip クリックは無視
+        if (e.target.classList.contains("tooltip")) return;
+
+        const content = header.nextElementSibling;
+        if (!content || !content.classList.contains("fold-content")) return;
+
+        content.classList.toggle("hidden");
+
+        const icon = header.querySelector(".fold-icon");
+        if (icon) {
+            icon.textContent = content.classList.contains("hidden") ? "▶" : "▼";
+        }
+    });
+});
+
+/* ============================================================
    初期状態
 ============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
+updateCommentList();
 
 });
-
