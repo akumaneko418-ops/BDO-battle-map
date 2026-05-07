@@ -99,7 +99,7 @@ canvas.addEventListener("click", (e) => {
     x,
     y,
     color: selectedColor,
-    label // 空文字でもそのまま
+    label
   };
 
   socket.emit("addMarker", newMarker);
@@ -268,7 +268,7 @@ socket.on("moveMarker", (data) => {
 });
 
 socket.on("deleteMarker", (id) => {
-  markers = markers.filter(m => m._id !== id);
+  markers = markers.filter(m => m._id !== id);   // ← 修正済み
   delete markerComments[id];
   drawMarkers();
 });
@@ -284,7 +284,6 @@ socket.on("chat", (data) => {
 
 socket.on("deleteComment", (id) => {
   for (const key in markerComments) {
-    markerComments[key] = markerComments[key].filter(c => c._id !== id);
+    markerComments[key] = markerComments[key].filter(c => c._id !== id);  // ← 修正済み
   }
 });
-
