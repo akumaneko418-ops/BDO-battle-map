@@ -33,13 +33,17 @@
     <div class="right-panel">
 
         <!-- 砦マーカー -->
-        <h3>
+        <h3 class="help-wrapper">
             砦マーカー
             <span class="help-icon">?</span>
-            <div class="help-popup">砦位置をマーク</div>
+            <div class="help-popup global-help">砦位置をマーク</div>
         </h3>
 
-        <input id="markerName" placeholder="例：A / B / C">
+        <div class="markerNameWrapper help-wrapper">
+            <input id="markerName" placeholder="例：A / B / C">
+            <span class="help-icon">?</span>
+            <div class="help-popup global-help">マーカー内の文字を追加</div>
+        </div>
 
         <div class="colorPicker">
             <span>色</span>
@@ -94,10 +98,10 @@
             </select>
         </div>
 
-        <div class="textAddButtonWrapper">
+        <div class="textAddButtonWrapper help-wrapper">
             <button id="addTextModeBtn">テキスト追加モード</button>
             <span class="help-icon">?</span>
-            <div class="help-popup">キャンバスをクリックしてテキストを入力</div>
+            <div class="help-popup global-help">キャンバスをクリックしてテキストを入力</div>
         </div>
 
         <hr>
