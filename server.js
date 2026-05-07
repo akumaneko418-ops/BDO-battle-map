@@ -19,7 +19,6 @@ const client = new MongoClient(uri);
 
 let commentsCollection;
 
-// ★ MongoDB 接続が完了してから Socket.IO を開始する
 async function start() {
   await client.connect();
   const db = client.db("bdo");
@@ -32,7 +31,15 @@ async function start() {
 
     try {
       const comments = await commentsCollection.find().toArray();
-      socket.emit("pastComments", comments);
+
+      // マーカーIDごとにグループ化
+      const grouped = {};
+      for (const c of comments) {
+        if (!grouped[c.markerId]) grouped[c.markerId] = [];
+        grouped[c.markerId].push(c);
+      }
+
+      socket.emit("pastComments", grouped);
     } catch (err) {
       console.error("Failed to load past comments:", err);
     }
@@ -58,3 +65,4 @@ async function start() {
 }
 
 start();
+
