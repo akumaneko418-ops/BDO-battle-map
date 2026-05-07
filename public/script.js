@@ -1,233 +1,91 @@
-const socket = io();
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { MongoClient, ObjectId } from "mongodb";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const canvas = document.getElementById("mapCanvas");
-const ctx = canvas.getContext("2d");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-let markers = [];
-let markerComments = {};
-let currentMarkerId = null;
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer);
 
-// =========================
-// ニックネーム → 色
-// =========================
-const nameColors = {};
+app.use(express.static(path.join(__dirname, "public")));
 
-function getColorForName(name) {
-  if (nameColors[name]) return nameColors[name];
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
 
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
+let commentsCollection;
+let markersCollection;
 
-  const hue = Math.abs(hash) % 360;
-  const color = `hsl(${hue}, 70%, 60%)`;
+async function start() {
+  await client.connect();
+  const db = client.db("bdo");
 
-  nameColors[name] = color;
-  return color;
-}
+  commentsCollection = db.collection("comments");
+  markersCollection = db.collection("markers");
 
-// =========================
-// マーカー色選択
-// =========================
-let selectedColor = "#ff7eb9"; // 初期はピンク
+  console.log("MongoDB connected");
 
-document.querySelectorAll(".colorOption").forEach(el => {
-  el.addEventListener("click", () => {
-    document.querySelectorAll(".colorOption").forEach(c => c.classList.remove("selectedColor"));
-    el.classList.add("selectedColor");
-    selectedColor = el.style.background;
-  });
-});
+  io.on("connection", async (socket) => {
+    console.log("ユーザー接続:", socket.id);
 
-document.getElementById("pink").classList.add("selectedColor");
+    // --- マーカー送信 ---
+    const markers = await markersCollection.find().toArray();
+    socket.emit("loadMarkers", markers);
 
-// =========================
-// マーカー描画
-// =========================
-function drawMarkers() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // --- コメント送信 ---
+    const comments = await commentsCollection.find().toArray();
+    const grouped = {};
+    for (const c of comments) {
+      if (!grouped[c.markerId]) grouped[c.markerId] = [];
+      grouped[c.markerId].push(c);
+    }
+    socket.emit("pastComments", grouped);
 
-  markers.forEach(m => {
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
-    ctx.fillStyle = m.color;
-    ctx.fill();
-  });
-}
+    // --- マーカー追加 ---
+    socket.on("addMarker", async (marker) => {
+      const result = await markersCollection.insertOne(marker);
+      marker._id = result.insertedId;
+      io.emit("addMarker", marker);
+    });
 
-// =========================
-// マーカー判定
-// =========================
-function getMarkerAt(x, y) {
-  return markers.find(m => Math.hypot(m.x - x, m.y - y) < 12);
-}
+    // --- マーカー移動 ---
+    socket.on("moveMarker", async (data) => {
+      await markersCollection.updateOne(
+        { _id: new ObjectId(data._id) },
+        { $set: { x: data.x, y: data.y } }
+      );
+      io.emit("moveMarker", data);
+    });
 
-// =========================
-// マーカー追加（左クリック）
-// =========================
-canvas.addEventListener("click", (e) => {
-  const x = e.offsetX;
-  const y = e.offsetY;
+    // --- マーカー削除 ---
+    socket.on("deleteMarker", async (id) => {
+      await markersCollection.deleteOne({ _id: new ObjectId(id) });
+      await commentsCollection.deleteMany({ markerId: id });
+      io.emit("deleteMarker", id);
+    });
 
-  const marker = getMarkerAt(x, y);
-  if (marker) {
-    currentMarkerId = marker.id;
-    return;
-  }
+    // --- コメント追加 ---
+    socket.on("chat", async (data) => {
+      const result = await commentsCollection.insertOne(data);
+      data._id = result.insertedId;
+      io.emit("chat", data);
+    });
 
-  const id = "m" + (markers.length + 1);
-
-  markers.push({
-    id,
-    x,
-    y,
-    color: selectedColor
+    // --- コメント削除 ---
+    socket.on("deleteComment", async (id) => {
+      await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+      io.emit("deleteComment", id);
+    });
   });
 
-  currentMarkerId = id;
-  drawMarkers();
-});
-
-// =========================
-// マーカー削除（右クリック）
-// =========================
-canvas.addEventListener("contextmenu", (e) => {
-  e.preventDefault();
-
-  const x = e.offsetX;
-  const y = e.offsetY;
-
-  const marker = getMarkerAt(x, y);
-  if (!marker) return;
-
-  markers = markers.filter(m => m.id !== marker.id);
-  delete markerComments[marker.id];
-
-  drawMarkers();
-});
-
-// =========================
-// マーカー移動（ドラッグ）
-// =========================
-let dragging = false;
-let dragTarget = null;
-
-canvas.addEventListener("mousedown", (e) => {
-  const x = e.offsetX;
-  const y = e.offsetY;
-
-  const marker = getMarkerAt(x, y);
-  if (marker) {
-    dragging = true;
-    dragTarget = marker;
-  }
-});
-
-canvas.addEventListener("mousemove", (e) => {
-  if (!dragging || !dragTarget) return;
-
-  dragTarget.x = e.offsetX;
-  dragTarget.y = e.offsetY;
-
-  drawMarkers();
-});
-
-canvas.addEventListener("mouseup", () => {
-  dragging = false;
-  dragTarget = null;
-});
-
-// =========================
-// コメント表示（ホバー）
-// =========================
-canvas.addEventListener("mousemove", (e) => {
-  if (dragging) return;
-
-  const x = e.offsetX;
-  const y = e.offsetY;
-
-  const marker = getMarkerAt(x, y);
-  const tooltip = document.getElementById("tooltip");
-
-  if (!marker) {
-    tooltip.style.display = "none";
-    return;
-  }
-
-  const comments = markerComments[marker.id] || [];
-
-  tooltip.style.left = e.pageX + "px";
-  tooltip.style.top = e.pageY + "px";
-  tooltip.style.display = "block";
-
-  tooltip.innerHTML = comments
-    .map(c => {
-      const color = getColorForName(c.nickname);
-      const canDelete = (c.nickname === document.getElementById("nickname").value);
-
-      return `
-        <div style="color:${color}">
-          [${new Date(c.timestamp).toLocaleTimeString()}] 
-          <b>${c.nickname}</b>: ${c.message}
-          ${canDelete ? `<span class="deleteBtn" onclick="deleteComment('${c._id}')">削除</span>` : ""}
-        </div>
-      `;
-    })
-    .join("");
-});
-
-// =========================
-// コメント削除
-// =========================
-function deleteComment(id) {
-  socket.emit("deleteComment", id);
+  const port = process.env.PORT || 10000;
+  httpServer.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
 }
 
-// =========================
-// コメント送信
-// =========================
-document.getElementById("sendBtn").addEventListener("click", () => {
-  const nickname = document.getElementById("nickname").value;
-  const message = document.getElementById("message").value;
-
-  if (!currentMarkerId) {
-    alert("先にマーカーを選択してください");
-    return;
-  }
-
-  const data = {
-    markerId: currentMarkerId,
-    nickname,
-    message,
-    timestamp: Date.now()
-  };
-
-  socket.emit("chat", data);
-  document.getElementById("message").value = "";
-});
-
-// =========================
-// Socket.IO
-// =========================
-socket.on("pastComments", (grouped) => {
-  markerComments = grouped;
-});
-
-socket.on("chat", (data) => {
-  if (!markerComments[data.markerId]) markerComments[data.markerId] = [];
-  markerComments[data.markerId].push(data);
-});
-
-socket.on("deleteComment", (id) => {
-  for (const key in markerComments) {
-    markerComments[key] = markerComments[key].filter(c => c._id !== id);
-  }
-});
-
-// =========================
-// 初期状態
-// =========================
-markers = [];
-drawMarkers();
-
+start();
