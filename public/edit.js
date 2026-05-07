@@ -240,19 +240,11 @@ canvas.addEventListener("mousemove", (e) => {
 
     tooltip.innerHTML = comments
         .map(c => {
-            const color = getColorForName(c.nickname);
-            const isMine = (c.nickname === myName);
+            const color = marker.color;
             return `
-                <div class="commentItem" data-marker-id="${marker._id}" data-comment-id="${c._id}" style="color:${color}">
-                    [${new Date(c.timestamp).toLocaleTimeString()}]
-                    <b>${c.nickname}</b>:
-                    <span class="commentText">${c.message}</span>
-                    ${
-                        isMine
-                            ? `<span class="editBtn" onclick="editComment('${c._id}')">編集</span>
-                               <span class="deleteBtn" onclick="deleteComment('${c._id}')">削除</span>`
-                            : `<span class="deleteBtn disabled">削除不可</span>`
-                    }
+                <div class="commentItem" data-marker-id="${marker._id}" data-comment-id="${c._id}">
+                    <span style="color:${color}; font-weight:bold;">(${marker.label})：</span>
+                    <span>${c.message}</span>
                 </div>
             `;
         })
@@ -274,21 +266,6 @@ canvas.addEventListener("mouseup", () => {
 canvas.addEventListener("mouseleave", () => {
     dragging = false;
     dragTarget = null;
-});
-
-// =========================
-// コメントにホバー → マーカー強調
-// =========================
-document.addEventListener("mousemove", (e) => {
-    const item = e.target.closest(".commentItem");
-    markers.forEach(m => m.highlight = false);
-
-    if (item) {
-        const markerId = item.dataset.markerId;
-        const target = markers.find(m => m._id === markerId);
-        if (target) target.highlight = true;
-    }
-    draw();
 });
 
 // =========================
@@ -320,27 +297,10 @@ document.getElementById("sendBtn").addEventListener("click", () => {
 });
 
 // =========================
-// コメント削除 / 編集
+// コメント削除 / 編集（右クリック削除に統合済み）
 // =========================
 window.deleteComment = function (id) {
     socket.emit("deleteComment", id);
-};
-
-window.editComment = function (id) {
-    const el = document.querySelector(`.commentItem[data-comment-id="${id}"] .commentText`);
-    if (!el) return;
-
-    const current = el.textContent;
-    const next = prompt("コメントを編集", current);
-    if (next === null) return;
-
-    const trimmed = next.trim();
-    if (!trimmed) {
-        alert("空のコメントにはできません");
-        return;
-    }
-
-    socket.emit("editComment", { id, message: trimmed });
 };
 
 // =========================
