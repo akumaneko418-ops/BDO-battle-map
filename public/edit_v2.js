@@ -187,7 +187,11 @@ document.getElementById("panModeBtn").onclick = () => {
    カラーピッカー（最新選択を優先）
 ============================================================ */
 function activateColor(el, selector) {
-    document.querySelectorAll(selector).forEach(btn => btn.classList.remove("selected"));
+    // 全カテゴリの selected を解除
+    document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
+        .forEach(btn => btn.classList.remove("selected"));
+
+    // 今選んだカテゴリだけ選択状態にする
     el.classList.add("selected");
 }
 
