@@ -11,14 +11,48 @@
       padding: 5px;
       display: none;
       font-size: 12px;
-      max-width: 200px;
+      max-width: 220px;
       z-index: 1000;
       pointer-events: none;
+    }
+
+    .deleteBtn {
+      color: red;
+      cursor: pointer;
+      margin-left: 5px;
+      font-size: 10px;
+      pointer-events: auto;
+    }
+
+    .colorPicker {
+      margin: 10px 0;
+    }
+
+    .colorOption {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 10px;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .selectedColor {
+      border: 2px solid black;
     }
   </style>
 </head>
 <body>
+
   <canvas id="mapCanvas" width="1200" height="800"></canvas>
+
+  <div class="colorPicker">
+    <span>マーカー色：</span>
+    <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
+    <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
+    <div id="yellow" class="colorOption" style="background:#fff47e"></div>
+  </div>
 
   <div>
     <input id="nickname" placeholder="ニックネーム">
@@ -30,11 +64,5 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
-</body>
-</html>
-
-    }
-  </script>
-
 </body>
 </html>
