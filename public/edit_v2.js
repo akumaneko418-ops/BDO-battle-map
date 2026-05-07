@@ -124,16 +124,49 @@ document.getElementById("addTextModeBtn").onclick = () => {
 };
 
 canvas.addEventListener("click", (e) => {
-    if (!textAddMode) return;
-
     const rect = canvas.getBoundingClientRect();
-    typingX = (e.clientX - rect.left) / zoom;
-    typingY = (e.clientY - rect.top) / zoom;
+    const x = (e.clientX - rect.left) / zoom;
+    const y = (e.clientY - rect.top) / zoom;
 
-    typing = true;
-    typingText = "";
+    if (textAddMode) {
+        typing = true;
+        typingText = "";
+        typingX = x;
+        typingY = y;
+        drawCanvas();
+        return;
+    }
 
-    drawCanvas();
+    if (penMode) return;
+
+    if (!document.getElementById("markerSection").classList.contains("hidden")) {
+        saveHistory();
+        markers.push({
+            id: "marker_" + Date.now(),
+            x,
+            y,
+            name: document.getElementById("markerName").value,
+            color: currentMarkerColor,
+            opacity: currentMarkerOpacity
+        });
+        drawCanvas();
+        return;
+    }
+
+    if (!document.getElementById("arrowSection").classList.contains("hidden")) {
+        saveHistory();
+        arrows.push({
+            id: "arrow_" + Date.now(),
+            x,
+            y,
+            angle: 0,
+            scale: 1,
+            color: currentArrowColor,
+            opacity: currentArrowOpacity
+        });
+        drawCanvas();
+        return;
+    }
 });
 
 document.addEventListener("keydown", (e) => {
@@ -149,7 +182,6 @@ document.addEventListener("keydown", (e) => {
             color: currentTextColor,
             size: currentTextSize
         });
-
         typing = false;
         textAddMode = false;
         typingText = "";
@@ -173,6 +205,7 @@ document.addEventListener("keydown", (e) => {
 
     drawCanvas();
 });
+
 /* ============================================================
    UI：砦マーカー
 ============================================================ */
@@ -291,7 +324,7 @@ canvas.addEventListener("mouseup", () => {
 });
 
 /* ============================================================
-   ズーム
+   ズーム（中央基準）
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
     zoom += zoomStep;
@@ -309,7 +342,7 @@ document.getElementById("zoomResetBtn").onclick = () => {
 };
 
 /* ============================================================
-   help-popup（右パネル外に出す）
+   help-popup
 ============================================================ */
 document.querySelectorAll(".help-icon").forEach(icon => {
     const popup = icon.nextElementSibling;
@@ -337,13 +370,14 @@ document.querySelectorAll(".fold-header").forEach(header => {
 
         if (content.classList.contains("hidden")) {
             content.classList.remove("hidden");
-            icon.textContent = "▲";   // 開いている → 閉じる動作
+            icon.textContent = "▲";
         } else {
             content.classList.add("hidden");
-            icon.textContent = "▼";   // 閉じている → 開く動作
+            icon.textContent = "▼";
         }
     });
 });
+
 /* ============================================================
    プリセット画像
 ============================================================ */
@@ -364,7 +398,7 @@ document.getElementById("presetSelect").onchange = (e) => {
 };
 
 /* ============================================================
-   全体保存（POST /save-map）
+   全体保存
 ============================================================ */
 document.getElementById("saveAllBtn").onclick = async () => {
     const payload = {
@@ -386,7 +420,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
 };
 
 /* ============================================================
-   右クリックメニュー（テキスト・砦・矢印）
+   右クリックメニュー
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -461,7 +495,6 @@ document.getElementById("deleteTextBtn").onclick = () => {
     drawCanvas();
     document.getElementById("textMenu").classList.add("hidden");
 };
-
 /* ============================================================
    矢印操作
 ============================================================ */
@@ -510,18 +543,23 @@ document.getElementById("arrowDeleteBtn").onclick = () => {
 };
 
 /* ============================================================
-   描画処理
+   描画処理（中央基準ズーム）
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
+
+    // 中央基準ズーム
+    ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
     if (backgroundImage) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
 
+    /* ===== ペン描画 ===== */
     penPaths.forEach(path => {
         ctx.save();
         ctx.strokeStyle = path.color;
@@ -539,6 +577,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* ===== 砦マーカー ===== */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -555,6 +594,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* ===== 矢印スタンプ ===== */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -574,6 +614,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* ===== テキスト ===== */
     texts.forEach(t => {
         ctx.save();
 
@@ -590,6 +631,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* ===== テキスト入力中カーソル ===== */
     if (typing) {
         ctx.save();
 
