@@ -11,47 +11,40 @@
     <h2>BDO Battle Map Editor</h2>
 </div>
 
+<!-- キャンバス上部の操作バー -->
+<div class="canvas-toolbar">
+    <button id="undoBtn" class="disabled">ひとつ戻す</button>
+    <button id="redoBtn" class="disabled">ひとつ進む</button>
+
+    <button id="zoomInBtn">＋</button>
+    <button id="zoomOutBtn">－</button>
+    <button id="zoomResetBtn">100%</button>
+</div>
+
 <div class="main-container">
 
     <!-- 左側：キャンバス -->
     <div class="canvas-area">
+        <div id="dropHint">ここに画像をドラッグ＆ドロップしてアップロード</div>
         <canvas id="mapCanvas" width="1600" height="900"></canvas>
     </div>
 
     <!-- 右側：ツールパネル -->
     <div class="right-panel">
 
-        <!-- 操作（Undo / Redo） -->
-        <h3>操作</h3>
-        <div class="undo-redo-row">
-            <button id="undoBtn" class="disabled">ひとつ戻す</button>
-            <button id="redoBtn" class="disabled">やり直す</button>
-        </div>
-
-        <!-- ズーム -->
-        <h3>画面の拡大/縮小</h3>
-        <div class="zoomTool">
-            <button id="zoomInBtn">＋</button>
-            <button id="zoomOutBtn">－</button>
-            <button id="zoomResetBtn">100%</button>
-        </div>
-
-        <hr>
-
         <!-- 砦マーカー -->
-        <h3>砦マーカー</h3>
-        <div class="markerNameInput">
-            <span>砦マーカー</span>
+        <h3>
+            砦マーカー
             <span class="help-icon">?</span>
-            <div class="help-popup">マップ上に配置する砦マーカーの名前です。</div>
+            <div class="help-popup">砦位置をマークできるよ</div>
+        </h3>
+
+        <div class="markerNameInput">
             <input id="markerName" placeholder="例：A / B / C">
         </div>
 
         <div class="colorPicker">
             <span>色</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">砦マーカーの色を選択します。</div>
-
             <div class="colorOption" style="background:#ff7eb9"></div>
             <div class="colorOption" style="background:#7ed6ff"></div>
             <div class="colorOption" style="background:#fff47e"></div>
@@ -59,9 +52,6 @@
 
         <div class="opacityPicker">
             <span>透明度</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">砦マーカーの透明度を調整します。</div>
-
             <input type="range" id="markerOpacity" min="0" max="1" step="0.01" value="1">
             <span id="markerOpacityValue">1.00</span>
         </div>
@@ -73,9 +63,6 @@
 
         <div class="arrowColorPicker">
             <span>色</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">矢印スタンプの色を選択します。</div>
-
             <div class="arrowColorOption" style="background:#ff7eb9"></div>
             <div class="arrowColorOption" style="background:#7ed6ff"></div>
             <div class="arrowColorOption" style="background:#fff47e"></div>
@@ -83,9 +70,6 @@
 
         <div class="arrowOpacityPicker">
             <span>透明度</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">矢印スタンプの透明度を調整します。</div>
-
             <input type="range" id="arrowOpacity" min="0" max="1" step="0.01" value="1">
             <span id="arrowOpacityValue">1.00</span>
         </div>
@@ -97,9 +81,6 @@
 
         <div class="textColorPicker">
             <span>テキスト色</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">テキストの色を選択します。</div>
-
             <div class="textColorOption" style="background:#ff7eb9"></div>
             <div class="textColorOption" style="background:#7ed6ff"></div>
             <div class="textColorOption" style="background:#fff47e"></div>
@@ -107,9 +88,6 @@
 
         <div class="textSizePicker">
             <span>文字サイズ</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">テキストの大きさを選択します。</div>
-
             <select id="textSize">
                 <option value="16">16px</option>
                 <option value="20">20px</option>
@@ -128,9 +106,6 @@
 
         <div class="penColorPicker">
             <span>色</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">ペンの色を選択します。</div>
-
             <div class="penColorOption" style="background:#ff7eb9"></div>
             <div class="penColorOption" style="background:#7ed6ff"></div>
             <div class="penColorOption" style="background:#fff47e"></div>
@@ -138,9 +113,6 @@
 
         <div class="penWidthPicker">
             <span>太さ</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">ペンの太さを選択します。</div>
-
             <select id="penWidth">
                 <option value="1">1px</option>
                 <option value="3">3px</option>
@@ -151,9 +123,6 @@
 
         <div class="penOpacityPicker">
             <span>透明度</span>
-            <span class="help-icon">?</span>
-            <div class="help-popup">ペンの透明度を調整します。</div>
-
             <input type="range" id="penOpacity" min="0" max="1" step="0.01" value="1">
             <span id="penOpacityValue">1.00</span>
         </div>
@@ -170,19 +139,17 @@
     </div>
 </div>
 
-<!-- マーカー右クリックメニュー -->
+<!-- 右クリックメニュー -->
 <div id="markerMenu" class="contextMenu hidden">
     <div id="addCommentBtn">コメント追加</div>
     <div id="deleteMarkerBtn">削除</div>
 </div>
 
-<!-- テキスト右クリックメニュー -->
 <div id="textMenu" class="contextMenu hidden">
     <div id="editTextBtn">編集</div>
     <div id="deleteTextBtn">削除</div>
 </div>
 
-<!-- 矢印右クリックメニュー -->
 <div id="arrowMenu" class="contextMenu hidden">
     <div id="arrowRotateBtn">回転</div>
     <div id="arrowScaleUpBtn">拡大</div>
