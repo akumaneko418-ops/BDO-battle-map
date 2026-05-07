@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BDO Battle Map</title>
+  <style>
+    body { margin: 0; }
+    canvas { background: #eee; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    let drawing = false;
+
+    canvas.addEventListener("mousedown", () => drawing = true);
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousemove", draw);
+
+    function draw(e) {
+      if (!drawing) return;
+
+      const x = e.offsetX;
+      const y = e.offsetY;
+
+      ctx.fillStyle = "red";
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      socket.emit("draw", { x, y });
+    }
+
+    socket.on("draw", (data) => {
+      ctx.fillStyle = "blue";
+      ctx.beginPath();
+      ctx.arc(data.x, data.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  </script>
+</body>
+</html>
