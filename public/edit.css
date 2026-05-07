@@ -25,3 +25,41 @@
 .hidden {
   display: none;
 }
+
+/* ============================
+   ? ホバー説明（help-icon）
+   ============================ */
+
+.help-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #555;
+  color: white;
+  font-size: 12px;
+  text-align: center;
+  line-height: 16px;
+  cursor: default;
+  user-select: none;
+}
+
+.help-icon:hover {
+  background: #777;
+}
+
+/* ツールチップ本体 */
+.help-tooltip {
+  position: absolute;
+  background: #222;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 99999;
+  max-width: 220px;
+  line-height: 1.4;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  pointer-events: none;
+}
