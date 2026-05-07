@@ -49,10 +49,10 @@ function getCurrentState() {
 }
 
 function restoreState(state) {
-    markers = state.markers;
-    arrows = state.arrows;
-    texts = state.texts;
-    penPaths = state.penPaths;
+    markers = state.markers || [];
+    arrows = state.arrows || [];
+    texts = state.texts || [];
+    penPaths = state.penPaths || [];
     zoom = state.zoom || 1;
     offsetX = state.offsetX || 0;
     offsetY = state.offsetY || 0;
@@ -116,7 +116,7 @@ function updateUndoRedoButtons() {
 }
 
 /* ============================================================
-   現在のツール
+   現在のツール・状態
 ============================================================ */
 let currentTool = "none";
 
@@ -162,9 +162,15 @@ document.getElementById("arrowModeBtn").onclick = () => {
 };
 
 document.getElementById("penModeBtn").onclick = () => {
-    currentTool = "pen";
-    penMode = true;
-    textAddMode = false;
+    // トグル動作にする
+    if (currentTool === "pen") {
+        currentTool = "none";
+        penMode = false;
+    } else {
+        currentTool = "pen";
+        penMode = true;
+        textAddMode = false;
+    }
 };
 
 document.getElementById("addTextModeBtn").onclick = () => {
@@ -178,6 +184,73 @@ document.getElementById("panModeBtn").onclick = () => {
     penMode = false;
     textAddMode = false;
 };
+
+/* ============================================================
+   カラーピッカー・スライダー類
+============================================================ */
+// 砦マーカー色
+document.querySelectorAll(".colorOption").forEach((el) => {
+    el.addEventListener("click", () => {
+        currentMarkerColor = getComputedStyle(el).backgroundColor;
+    });
+});
+
+// 砦マーカー透明度
+const markerOpacityInput = document.getElementById("markerOpacity");
+const markerOpacityValue = document.getElementById("markerOpacityValue");
+markerOpacityInput.addEventListener("input", () => {
+    currentMarkerOpacity = parseFloat(markerOpacityInput.value);
+    markerOpacityValue.textContent = currentMarkerOpacity.toFixed(2);
+});
+
+// 矢印色
+document.querySelectorAll(".arrowColorOption").forEach((el) => {
+    el.addEventListener("click", () => {
+        currentArrowColor = getComputedStyle(el).backgroundColor;
+    });
+});
+
+// 矢印透明度
+const arrowOpacityInput = document.getElementById("arrowOpacity");
+const arrowOpacityValue = document.getElementById("arrowOpacityValue");
+arrowOpacityInput.addEventListener("input", () => {
+    currentArrowOpacity = parseFloat(arrowOpacityInput.value);
+    arrowOpacityValue.textContent = currentArrowOpacity.toFixed(2);
+});
+
+// テキスト色
+document.querySelectorAll(".textColorOption").forEach((el) => {
+    el.addEventListener("click", () => {
+        currentTextColor = getComputedStyle(el).backgroundColor;
+    });
+});
+
+// テキストサイズ
+const textSizeInput = document.getElementById("textSize");
+textSizeInput.addEventListener("input", () => {
+    currentTextSize = parseInt(textSizeInput.value, 10);
+});
+
+// ペン色
+document.querySelectorAll(".penColorOption").forEach((el) => {
+    el.addEventListener("click", () => {
+        currentPenColor = getComputedStyle(el).backgroundColor;
+    });
+});
+
+// ペン太さ
+const penWidthSelect = document.getElementById("penWidth");
+penWidthSelect.addEventListener("change", () => {
+    currentPenWidth = parseInt(penWidthSelect.value, 10);
+});
+
+// ペン透明度
+const penOpacityInput = document.getElementById("penOpacity");
+const penOpacityValue = document.getElementById("penOpacityValue");
+penOpacityInput.addEventListener("input", () => {
+    currentPenOpacity = parseFloat(penOpacityInput.value);
+    penOpacityValue.textContent = currentPenOpacity.toFixed(2);
+});
 
 /* ============================================================
    クリック座標（パン＋中央ズーム対応）
@@ -204,6 +277,56 @@ let typing = false;
 let typingText = "";
 let typingX = 0;
 let typingY = 0;
+
+document.addEventListener("keydown", (e) => {
+    if (!typing) return;
+
+    if (e.key === "Enter") {
+        // 確定
+        if (typingText.trim() !== "") {
+            saveHistory();
+            texts.push({
+                id: "text_" + Date.now(),
+                x: typingX,
+                y: typingY,
+                text: typingText,
+                color: currentTextColor,
+                size: currentTextSize
+            });
+            typing = false;
+            typingText = "";
+            drawCanvas();
+            broadcastState();
+        } else {
+            typing = false;
+            typingText = "";
+            drawCanvas();
+        }
+        e.preventDefault();
+        return;
+    }
+
+    if (e.key === "Escape") {
+        typing = false;
+        typingText = "";
+        drawCanvas();
+        e.preventDefault();
+        return;
+    }
+
+    if (e.key === "Backspace") {
+        typingText = typingText.slice(0, -1);
+        drawCanvas();
+        e.preventDefault();
+        return;
+    }
+
+    if (e.key.length === 1) {
+        typingText += e.key;
+        drawCanvas();
+        e.preventDefault();
+    }
+});
 
 /* ============================================================
    キャンバスクリック処理
@@ -255,9 +378,6 @@ canvas.addEventListener("click", (e) => {
         return;
     }
 });
-
-/* ======== ▼▼▼ Part 2 に続く ▼▼▼ ======== */
-/* ======== ▲▲▲ Part 1 からの続き ▲▲▲ ======== */
 
 /* ============================================================
    マーカー／矢印ドラッグ用
@@ -334,6 +454,7 @@ canvas.addEventListener("mousedown", (e) => {
         isPanning = true;
         panStartX = e.clientX - offsetX;
         panStartY = e.clientY - offsetY;
+        return;
     }
 });
 
@@ -485,69 +606,66 @@ function drawCanvas() {
         ctx.restore();
     });
 
-/* ======== ▼▼▼ Part 3 に続く ▼▼▼ ======== */
-/* ======== ▲▲▲ Part 2 からの続き ▲▲▲ ======== */
+    /* ===== 矢印 ===== */
+    arrows.forEach(a => {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(a.angle || 0);
+        ctx.scale(a.scale || 1, a.scale || 1);
+        ctx.globalAlpha = a.opacity || currentArrowOpacity;
 
-/* ===== 矢印 ===== */
-arrows.forEach(a => {
-    ctx.save();
-    ctx.translate(a.x, a.y);
-    ctx.rotate(a.angle || 0);
-    ctx.scale(a.scale || 1, a.scale || 1);
-    ctx.globalAlpha = a.opacity || currentArrowOpacity;
+        ctx.beginPath();
+        ctx.moveTo(0, -20);
+        ctx.lineTo(15, 20);
+        ctx.lineTo(-15, 20);
+        ctx.closePath();
 
-    ctx.beginPath();
-    ctx.moveTo(0, -20);
-    ctx.lineTo(15, 20);
-    ctx.lineTo(-15, 20);
-    ctx.closePath();
+        ctx.fillStyle = a.color || currentArrowColor;
+        ctx.fill();
 
-    ctx.fillStyle = a.color || currentArrowColor;
-    ctx.fill();
+        ctx.restore();
+    });
+
+    /* ===== テキスト ===== */
+    texts.forEach(t => {
+        ctx.save();
+
+        ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = t.color;
+
+        ctx.shadowColor = "rgba(255,255,255,0.8)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        ctx.fillText(t.text, t.x, t.y);
+
+        ctx.restore();
+    });
+
+    /* ===== テキスト入力中カーソル ===== */
+    if (typing) {
+        ctx.save();
+
+        ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = currentTextColor;
+
+        ctx.fillText(typingText, typingX, typingY);
+
+        const width = ctx.measureText(typingText).width;
+        const cursorX = typingX + width + 2;
+
+        ctx.beginPath();
+        ctx.moveTo(cursorX, typingY - currentTextSize);
+        ctx.lineTo(cursorX, typingY + 4);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = currentTextColor;
+        ctx.stroke();
+
+        ctx.restore();
+    }
 
     ctx.restore();
-});
-
-/* ===== テキスト ===== */
-texts.forEach(t => {
-    ctx.save();
-
-    ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
-    ctx.fillStyle = t.color;
-
-    ctx.shadowColor = "rgba(255,255,255,0.8)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-
-    ctx.fillText(t.text, t.x, t.y);
-
-    ctx.restore();
-});
-
-/* ===== テキスト入力中カーソル ===== */
-if (typing) {
-    ctx.save();
-
-    ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
-    ctx.fillStyle = currentTextColor;
-
-    ctx.fillText(typingText, typingX, typingY);
-
-    const width = ctx.measureText(typingText).width;
-    const cursorX = typingX + width + 2;
-
-    ctx.beginPath();
-    ctx.moveTo(cursorX, typingY - currentTextSize);
-    ctx.lineTo(cursorX, typingY + 4);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = currentTextColor;
-    ctx.stroke();
-
-    ctx.restore();
-}
-
-ctx.restore();
 }
 
 /* ============================================================
@@ -580,7 +698,7 @@ document.body.addEventListener("drop", (e) => {
 });
 
 /* ============================================================
-   メニュー閉じる
+   メニュー閉じる（今は単に全部閉じるだけ）
 ============================================================ */
 document.addEventListener("click", () => {
     document.getElementById("markerMenu").classList.add("hidden");
@@ -593,5 +711,3 @@ document.addEventListener("click", () => {
 ============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
-
-/* ======== ★★★ Part 3 / 3（END） ★★★ ======== */
