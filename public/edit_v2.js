@@ -173,7 +173,6 @@ document.addEventListener("keydown", (e) => {
 
     drawCanvas();
 });
-
 /* ============================================================
    UI：砦マーカー
 ============================================================ */
@@ -328,7 +327,7 @@ document.querySelectorAll(".help-icon").forEach(icon => {
 });
 
 /* ============================================================
-   折りたたみ UI
+   折りたたみ UI（▲ / ▼）
 ============================================================ */
 document.querySelectorAll(".fold-header").forEach(header => {
     header.addEventListener("click", () => {
@@ -338,14 +337,13 @@ document.querySelectorAll(".fold-header").forEach(header => {
 
         if (content.classList.contains("hidden")) {
             content.classList.remove("hidden");
-            icon.textContent = "▼";
+            icon.textContent = "▲";   // 開いている → 閉じる動作
         } else {
             content.classList.add("hidden");
-            icon.textContent = "▶";
+            icon.textContent = "▼";   // 閉じている → 開く動作
         }
     });
 });
-
 /* ============================================================
    プリセット画像
 ============================================================ */
@@ -370,6 +368,7 @@ document.getElementById("presetSelect").onchange = (e) => {
 ============================================================ */
 document.getElementById("saveAllBtn").onclick = async () => {
     const payload = {
+        name: document.getElementById("fileNameInput").value,
         background: backgroundImage ? backgroundImage.src : null,
         markers,
         arrows,
@@ -622,8 +621,7 @@ document.body.addEventListener("dragover", (e) => e.preventDefault());
 document.body.addEventListener("drop", (e) => {
     e.preventDefault();
 
-    const file = e.dataTransfer
-   　const file = e.dataTransfer.files[0];
+    const file = e.dataTransfer.files[0];
     if (!file) return;
 
     const reader = new FileReader();
