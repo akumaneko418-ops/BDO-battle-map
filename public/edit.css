@@ -263,3 +263,8 @@ input[type="range"] {
     font-weight: 700;
     border: 1px solid #bbb;
 }
+.canvas-toolbar button {
+    height: 32px;
+    padding: 0 10px;
+    line-height: 32px;
+}
