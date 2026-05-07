@@ -7,7 +7,28 @@ let markers = [];
 let markerComments = {};
 let currentMarkerId = null;
 
-// マーカーを描画
+// ニックネーム → 色 のキャッシュ
+const nameColors = {};
+
+// ニックネームから色を生成（ハッシュ）
+function getColorForName(name) {
+  if (nameColors[name]) return nameColors[name];
+
+  // ハッシュ生成
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // ハッシュ → HSL 色変換
+  const hue = Math.abs(hash) % 360;
+  const color = `hsl(${hue}, 70%, 60%)`;
+
+  nameColors[name] = color;
+  return color;
+}
+
+// マーカー描画
 function drawMarkers() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   markers.forEach(m => {
@@ -18,7 +39,7 @@ function drawMarkers() {
   });
 }
 
-// マーカーをクリックしたら選択
+// マーカー選択
 canvas.addEventListener("click", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
@@ -30,7 +51,7 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-// マーカーにホバーしたらコメント表示
+// マーカーにホバー → コメント表示
 canvas.addEventListener("mousemove", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
@@ -50,8 +71,14 @@ canvas.addEventListener("mousemove", (e) => {
   tooltip.style.display = "block";
 
   tooltip.innerHTML = comments
-    .map(c => `[${new Date(c.timestamp).toLocaleTimeString()}] ${c.nickname}: ${c.message}`)
-    .join("<br>");
+    .map(c => {
+      const color = getColorForName(c.nickname);
+      return `<div style="color:${color}">
+        [${new Date(c.timestamp).toLocaleTimeString()}] 
+        <b>${c.nickname}</b>: ${c.message}
+      </div>`;
+    })
+    .join("");
 });
 
 // コメント送信
@@ -86,7 +113,7 @@ socket.on("chat", (data) => {
   markerComments[data.markerId].push(data);
 });
 
-// 初期マーカー（例）
+// 初期マーカー
 markers = [
   { id: "m1", x: 200, y: 300 },
   { id: "m2", x: 500, y: 400 },
@@ -94,3 +121,4 @@ markers = [
 ];
 
 drawMarkers();
+
