@@ -36,12 +36,10 @@
         <h3>
             砦マーカー
             <span class="help-icon">?</span>
-            <div class="help-popup">砦位置をマークできるよ</div>
+            <div class="help-popup">砦位置をマーク</div>
         </h3>
 
-        <div class="markerNameInput">
-            <input id="markerName" placeholder="例：A / B / C">
-        </div>
+        <input id="markerName" placeholder="例：A / B / C">
 
         <div class="colorPicker">
             <span>色</span>
@@ -96,8 +94,11 @@
             </select>
         </div>
 
-        <input id="textInput" placeholder="テキストを入力">
-        <button id="addTextModeBtn">テキスト追加モード</button>
+        <div class="textAddButtonWrapper">
+            <button id="addTextModeBtn">テキスト追加モード</button>
+            <span class="help-icon">?</span>
+            <div class="help-popup">キャンバスをクリックしてテキストを入力</div>
+        </div>
 
         <hr>
 
