@@ -32,7 +32,6 @@ function getCurrentState() {
         arrows: JSON.parse(JSON.stringify(arrows)),
         texts: JSON.parse(JSON.stringify(texts)),
         penPaths: JSON.parse(JSON.stringify(penPaths)),
-        zoom,
         backgroundImageSrc: backgroundImage ? backgroundImage.src : null
     };
 }
@@ -42,7 +41,6 @@ function restoreState(state) {
     arrows = state.arrows;
     texts = state.texts;
     penPaths = state.penPaths;
-    zoom = state.zoom;
 
     if (state.backgroundImageSrc) {
         const img = new Image();
@@ -219,7 +217,7 @@ document.querySelectorAll(".textColorOption").forEach(opt => {
     };
 });
 
-document.getElementById("textSize").onchange = (e) => {
+document.getElementById("textSize").oninput = (e) => {
     currentTextSize = parseInt(e.target.value);
 };
 
@@ -297,19 +295,16 @@ canvas.addEventListener("mouseup", () => {
    ズーム
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
-    saveHistory();
     zoom += zoomStep;
     drawCanvas();
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
-    saveHistory();
     zoom = Math.max(0.2, zoom - zoomStep);
     drawCanvas();
 };
 
 document.getElementById("zoomResetBtn").onclick = () => {
-    saveHistory();
     zoom = 1.0;
     drawCanvas();
 };
@@ -333,6 +328,65 @@ document.querySelectorAll(".help-icon").forEach(icon => {
 });
 
 /* ============================================================
+   折りたたみ UI
+============================================================ */
+document.querySelectorAll(".fold-header").forEach(header => {
+    header.addEventListener("click", () => {
+        const targetId = header.dataset.target;
+        const content = document.getElementById(targetId);
+        const icon = header.querySelector(".fold-icon");
+
+        if (content.classList.contains("hidden")) {
+            content.classList.remove("hidden");
+            icon.textContent = "▼";
+        } else {
+            content.classList.add("hidden");
+            icon.textContent = "▶";
+        }
+    });
+});
+
+/* ============================================================
+   プリセット画像
+============================================================ */
+document.getElementById("presetSelect").onchange = (e) => {
+    const url = e.target.value;
+    if (!url) return;
+
+    const img = new Image();
+    img.onload = () => {
+        saveHistory();
+        canvas.width = img.width;
+        canvas.height = img.height;
+        backgroundImage = img;
+        document.getElementById("dropHint").style.display = "none";
+        drawCanvas();
+    };
+    img.src = url;
+};
+
+/* ============================================================
+   全体保存（POST /save-map）
+============================================================ */
+document.getElementById("saveAllBtn").onclick = async () => {
+    const payload = {
+        background: backgroundImage ? backgroundImage.src : null,
+        markers,
+        arrows,
+        texts,
+        penPaths
+    };
+
+    await fetch("/save-map", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    alert("保存しました");
+};
+
+/* ============================================================
    右クリックメニュー（テキスト・砦・矢印）
 ============================================================ */
 canvas.addEventListener("contextmenu", (e) => {
@@ -342,7 +396,6 @@ canvas.addEventListener("contextmenu", (e) => {
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
 
-    /* ---- テキスト判定 ---- */
     for (let t of texts) {
         const width = t.text.length * (t.size * 0.6);
         const height = t.size;
@@ -357,7 +410,6 @@ canvas.addEventListener("contextmenu", (e) => {
         }
     }
 
-    /* ---- 砦マーカー判定 ---- */
     for (let m of markers) {
         const dx = x - m.x;
         const dy = y - m.y;
@@ -371,7 +423,6 @@ canvas.addEventListener("contextmenu", (e) => {
         }
     }
 
-    /* ---- 矢印判定 ---- */
     for (let a of arrows) {
         const dx = x - a.x;
         const dy = y - a.y;
@@ -468,12 +519,10 @@ function drawCanvas() {
     ctx.save();
     ctx.scale(zoom, zoom);
 
-    /* ---- 背景画像 ---- */
     if (backgroundImage) {
         ctx.drawImage(backgroundImage, 0, 0);
     }
 
-    /* ---- ペン ---- */
     penPaths.forEach(path => {
         ctx.save();
         ctx.strokeStyle = path.color;
@@ -491,7 +540,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ---- 砦マーカー ---- */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -508,7 +556,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ---- 矢印 ---- */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -528,7 +575,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ---- テキスト ---- */
     texts.forEach(t => {
         ctx.save();
 
@@ -545,7 +591,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* ---- 入力中テキスト（カーソル付き） ---- */
     if (typing) {
         ctx.save();
 
@@ -577,7 +622,8 @@ document.body.addEventListener("dragover", (e) => e.preventDefault());
 document.body.addEventListener("drop", (e) => {
     e.preventDefault();
 
-    const file = e.dataTransfer.files[0];
+    const file = e.dataTransfer
+   　const file = e.dataTransfer.files[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -601,7 +647,8 @@ document.body.addEventListener("drop", (e) => {
 /* ============================================================
    メニュー閉じる
 ============================================================ */
-document.addEventListener("click", () => {    document.getElementById("markerMenu").classList.add("hidden");
+document.addEventListener("click", () => {
+    document.getElementById("markerMenu").classList.add("hidden");
     document.getElementById("textMenu").classList.add("hidden");
     document.getElementById("arrowMenu").classList.add("hidden");
 });
@@ -611,4 +658,3 @@ document.addEventListener("click", () => {    document.getElementById("markerMen
 ============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
-
