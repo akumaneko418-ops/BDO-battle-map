@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>画像編集</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="edit.css">
 </head>
 <body>
 
@@ -30,14 +31,26 @@
 
                 <div class="markerNameInput">
                     <span>マーカー名：</span>
+                    <span class="help-icon" data-help="マーカーの中に表示される名前です（例：A/B/C/D）">?</span>
                     <input id="markerName" placeholder="例：A/B/C/D">
                 </div>
 
                 <div class="colorPicker">
                     <span>色：</span>
+                    <span class="help-icon" data-help="マーカーの色を選びます">?</span>
                     <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
                     <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
                     <div id="yellow" class="colorOption" style="background:#fff47e"></div>
+                </div>
+
+                <div class="saveHelp">
+                    <span>保存：</span>
+                    <span class="help-icon" data-help="現在のマップを画像として保存します">?</span>
+                </div>
+
+                <div class="backHelp">
+                    <span>一覧：</span>
+                    <span class="help-icon" data-help="保存済みマップの一覧に戻ります">?</span>
                 </div>
             </div>
 
@@ -54,6 +67,9 @@
 
     <div id="tooltip"></div>
 
+    <!-- ? ホバー説明用ツールチップ -->
+    <div id="helpTooltip" class="help-tooltip hidden"></div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="edit.js"></script>
 
@@ -62,6 +78,22 @@
         <div id="addCommentBtn">コメント追加</div>
         <div id="deleteMarkerBtn">マーカー削除</div>
     </div>
+
+    <script>
+        document.querySelectorAll(".help-icon").forEach(icon => {
+            icon.addEventListener("mouseenter", (e) => {
+                const tip = document.getElementById("helpTooltip");
+                tip.textContent = icon.dataset.help;
+                tip.style.left = (e.pageX + 10) + "px";
+                tip.style.top = (e.pageY + 10) + "px";
+                tip.classList.remove("hidden");
+            });
+
+            icon.addEventListener("mouseleave", () => {
+                document.getElementById("helpTooltip").classList.add("hidden");
+            });
+        });
+    </script>
 
 </body>
 </html>
