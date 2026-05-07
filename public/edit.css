@@ -254,3 +254,12 @@ input[type="range"] {
 .contextMenu div:hover {
     background: #eee;
 }
+/* 砦マーカー？ の ? をボタン風に */
+.fold-header span:last-child {
+    background: #ddd;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    font-weight: 700;
+    border: 1px solid #bbb;
+}
