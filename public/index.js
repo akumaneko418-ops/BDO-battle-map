@@ -152,7 +152,7 @@ async function loadSavedImages() {
         groups[f.category].push(f);
     });
 
-    const container = document.getElementById("savedImages");
+    const container = document.getElementById("savedList");
     container.innerHTML = "";
 
     Object.keys(groups).forEach(cat => {
