@@ -42,43 +42,41 @@
     <!-- 右パネル -->
     <div class="right-panel">
 
-        <!-- ツール -->
         <!-- 砦マーカー設定 -->
-<div class="fold-header">
+        <div class="fold-header">
+            <div class="left-group">
+                <span class="section-title">砦マーカー</span>
+                <span class="help-btn">
+                    ？
+                    <span class="tooltip">砦位置をマーキングする</span>
+                </span>
+            </div>
+            <span class="fold-icon">▼</span>
+        </div>
 
-    <div class="left-group">
-        <span class="section-title">砦マーカー</span>
+        <div class="fold-content">
 
-        <span class="help-btn">
-            ？
-            <span class="tooltip">砦位置をマーキングする</span>
-        </span>
-    </div>
+            <!-- ★ 間隔調整のため wrapper に class を追加 -->
+            <div class="markerNameWrapper compact-row">
+                <label for="markerName">砦の名前</label>
+                <input id="markerName" type="text" placeholder="砦の名前">
+            </div>
 
-    <span class="fold-icon">▼</span>
-</div>
+            <!-- ★ 色選択にも class を追加してコンパクト化 -->
+            <div class="colorPicker compact-row">
+                <span>色</span>
+                <div class="colorOption" style="background:#ff7eb9"></div>
+                <div class="colorOption" style="background:#7ed6ff"></div>
+                <div class="colorOption" style="background:#fff47e"></div>
+            </div>
 
-<div class="fold-content">
-
-    <div class="markerNameWrapper">
-        <label for="markerName">砦の名前</label>
-        <input id="markerName" type="text" placeholder="砦の名前">
-    </div>
-
-    <div class="colorPicker">
-        <span>色</span>
-        <div class="colorOption" style="background:#ff7eb9"></div>
-        <div class="colorOption" style="background:#7ed6ff"></div>
-        <div class="colorOption" style="background:#fff47e"></div>
-    </div>
-
-            <div class="opacityPicker">
+            <div class="opacityPicker compact-row">
                 <label for="markerOpacitySlider">不透明度</label>
                 <input id="markerOpacitySlider" type="range" min="0.1" max="1" step="0.05" value="1">
                 <span id="markerOpacityValue">1.00</span>
             </div>
 
-            <div class="opacityPicker">
+            <div class="opacityPicker compact-row">
                 <label for="markerSizeSlider">マーカーサイズ</label>
                 <input id="markerSizeSlider" type="range" min="5" max="40" value="10">
             </div>
@@ -90,20 +88,20 @@
         </div>
         <div class="fold-content">
 
-            <div class="arrowColorPicker">
+            <div class="arrowColorPicker compact-row">
                 <span>色</span>
                 <div class="arrowColorOption" style="background:#ff7eb9"></div>
                 <div class="arrowColorOption" style="background:#7ed6ff"></div>
                 <div class="arrowColorOption" style="background:#fff47e"></div>
             </div>
 
-            <div class="arrowOpacityPicker">
+            <div class="arrowOpacityPicker compact-row">
                 <label for="arrowOpacitySlider">不透明度</label>
                 <input id="arrowOpacitySlider" type="range" min="0.1" max="1" step="0.05" value="1">
                 <span id="arrowOpacityValue">1.00</span>
             </div>
 
-            <div class="arrowOpacityPicker">
+            <div class="arrowOpacityPicker compact-row">
                 <label for="arrowSizeSlider">矢印サイズ</label>
                 <input id="arrowSizeSlider" type="range" min="0.5" max="3" step="0.1" value="1">
             </div>
@@ -115,14 +113,14 @@
         </div>
         <div class="fold-content">
 
-            <div class="textColorPicker">
+            <div class="textColorPicker compact-row">
                 <span>色</span>
                 <div class="textColorOption" style="background:#ff7eb9"></div>
                 <div class="textColorOption" style="background:#7ed6ff"></div>
                 <div class="textColorOption" style="background:#fff47e"></div>
             </div>
 
-            <div class="textSizePicker">
+            <div class="textSizePicker compact-row">
                 <label for="textSizeSlider">文字サイズ</label>
                 <input id="textSizeSlider" type="range" min="10" max="40" value="16">
             </div>
@@ -134,20 +132,20 @@
         </div>
         <div class="fold-content">
 
-            <div class="penColorPicker">
+            <div class="penColorPicker compact-row">
                 <span>色</span>
                 <div class="penColorOption" style="background:#ff7eb9"></div>
                 <div class="penColorOption" style="background:#7ed6ff"></div>
                 <div class="penColorOption" style="background:#fff47e"></div>
             </div>
 
-            <div class="penOpacityPicker">
+            <div class="penOpacityPicker compact-row">
                 <label for="penOpacitySlider">不透明度</label>
                 <input id="penOpacitySlider" type="range" min="0.1" max="1" step="0.05" value="1">
                 <span id="penOpacityValue">1.00</span>
             </div>
 
-            <div class="penWidthPicker">
+            <div class="penWidthPicker compact-row">
                 <label for="penWidthSlider">太さ</label>
                 <input id="penWidthSlider" type="range" min="1" max="10" value="3">
             </div>
