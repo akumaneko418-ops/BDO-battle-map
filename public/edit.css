@@ -46,11 +46,22 @@ body {
     gap: 4px;
 }
 
+/* PNG出力・全て保存を右揃え */
+#exportPngBtn {
+    margin-left: auto !important;
+}
+
+/* 全て保存ボタンの中央揃え */
 .saveButton {
     background: #007bff;
     color: #fff;
-    font-size: 15px;
-    padding: 10px 20px;
+    font-size: 14px;
+    padding: 0 16px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ============================================================
@@ -216,7 +227,7 @@ button:hover {
 }
 
 /* ============================================================
-   スライダー
+   スライダー（コンパクト化）
 ============================================================ */
 .opacityPicker,
 .textSizePicker,
@@ -226,7 +237,29 @@ button:hover {
 
 input[type="range"] {
     width: 100%;
-    margin: 4px 0;
+    height: 4px !important;
+    margin: 1px 0 !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50%;
+    background: #666;
+    cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50%;
+    background: #666;
+    cursor: pointer;
+}
+
+/* テキストとスライダーの間隔 */
+.compact-row label {
+    margin-bottom: 1px !important;
 }
 
 /* ============================================================
@@ -269,93 +302,4 @@ input[type="range"] {
 
 .contextMenu div:hover {
     background: #eee;
-}
-
-/* ============================================================
-   コンパクト化（B仕様）
-============================================================ */
-
-/* 砦の名前と色の間隔 */
-.markerNameWrapper {
-    margin-bottom: 6px;
-}
-
-.colorPicker {
-    margin-top: 4px;
-}
-
-/* 行間 */
-.compact-row {
-    margin: 6px 0;
-}
-
-/* ラベル */
-.fold-content label {
-    margin-bottom: 3px;
-    display: inline-block;
-}
-/* ============================================================
-   スライダーをさらにコンパクト化
-============================================================ */
-
-input[type="range"] {
-    height: 4px !important;
-    margin: 2px 0 !important;
-}
-
-/* つまみ（thumb）を小さくする */
-input[type="range"]::-webkit-slider-thumb {
-    width: 10px !important;
-    height: 10px !important;
-    border-radius: 50%;
-    background: #666;
-    cursor: pointer;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 10px !important;
-    height: 10px !important;
-    border-radius: 50%;
-    background: #666;
-    cursor: pointer;
-}
-/* スライダーとテキストの間隔をさらに詰める */
-.compact-row label {
-    margin-bottom: 1px !important;
-}
-
-input[type="range"] {
-    margin: 1px 0 !important;
-}
-/* 「全て保存」ボタンのテキスト位置を中央に修正 */
-.saveButton {
-    padding: 0 16px !important;
-    height: 32px !important;
-    line-height: 32px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-/* スライダーとテキストの間隔をさらに詰める */
-.compact-row label {
-    margin-bottom: 1px !important;
-}
-
-input[type="range"] {
-    margin: 1px 0 !important;
-}
-
-/* 「全て保存」ボタンのテキスト位置を中央に修正 */
-.saveButton {
-    padding: 0 16px !important;
-    height: 32px !important;
-    line-height: 32px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* PNG出力・全て保存を右揃えにする */
-#exportPngBtn {
-    margin-left: auto !important;
 }
