@@ -604,7 +604,7 @@ function drawCanvas() {
     ctx.restore();
 }
 
-// ====================== 画像ドロップ ======================
+// ====================== ドロップ ======================
 window.addEventListener("dragover",e=>e.preventDefault(),false);
 window.addEventListener("drop",e=>e.preventDefault(),false);
 document.body.addEventListener("dragover",e=>e.preventDefault());
@@ -744,10 +744,16 @@ let currentTitle = null;
 document.getElementById("saveAllBtn").onclick = async () => {
     cancelTyping();
 
-    const title = prompt("保存名を入力してください：");
-    if (!title) return;
+    // ← テキストボックスから名前を取る
+    const fileNameInput = document.getElementById("fileNameInput");
+    const title = fileNameInput.value.trim();
 
-    currentTitle = title; // ← これが PNG 出力名と連動する
+    if (!title) {
+        alert("ファイル名を入力してください");
+        return;
+    }
+
+    currentTitle = title; // PNG 出力と連動
 
     const image = canvas.toDataURL("image/png");
 
@@ -773,7 +779,6 @@ document.getElementById("saveAllBtn").onclick = async () => {
         alert("保存に失敗しました");
     }
 };
-
 
 // ====================== 初期描画 ======================
 updateUndoRedoButtons();
