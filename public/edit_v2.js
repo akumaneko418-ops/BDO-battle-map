@@ -768,7 +768,14 @@ document.getElementById("saveAllBtn").onclick = async () => {
     const res = await fetch("/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+    title: currentTitle,
+    category: document.getElementById("categorySelect").value, // ★ 追加
+    image: canvas.toDataURL(),
+    markers,
+    comments
+})
+
     });
 
     const json = await res.json();
