@@ -142,6 +142,38 @@ body {
 .fold-header:hover .tooltip {
     display: block;
 }
+.help-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    background: #e0e0e0;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 6px;
+    cursor: default;
+    position: relative;
+}
+
+.help-btn .tooltip {
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 0;
+    background: #333;
+    color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 9999;
+}
+
+.help-btn:hover .tooltip {
+    display: block;
+}
+
 
 /* ============================================================
    ボタン
