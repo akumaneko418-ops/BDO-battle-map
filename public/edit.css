@@ -278,3 +278,12 @@ input[type="range"] {
     cursor: default;
     line-height: 1.2;
 }
+.fold-header {
+    padding: 4px 6px;
+    font-size: 13px;
+}
+
+.fold-content {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+}
