@@ -99,6 +99,17 @@ function updateUndoRedoButtons() {
     document.getElementById("redoBtn").classList.toggle("disabled", !redoHistory.length);
 }
 
+// ====================== ツール解除（グローバル） ======================
+function clearToolSelection() {
+    currentTool = "none";
+    penMode = false;
+    textAddMode = false;
+
+    // パレットの強調表示も解除
+    document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
+        .forEach(btn => btn.classList.remove("selected"));
+}
+
 // ====================== ツール設定 ======================
 let currentTool = "none";
 let currentMarkerColor = "#ff7eb9", currentMarkerOpacity = 1.0, currentMarkerSize = 10;
@@ -208,7 +219,6 @@ document.addEventListener("keydown", e => {
     if (e.key === "Backspace") { typingText = typingText.slice(0, -1); drawCanvas(); e.preventDefault(); return; }
     if (e.key.length === 1) { typingText += e.key; drawCanvas(); e.preventDefault(); }
 });
-
 // ====================== バウンディングボックス ======================
 function getBoundingBox(obj, type) {
     if (type === "arrow") {
@@ -313,16 +323,15 @@ function hitTestArrow(x,y){
         return Math.abs(x-a.x)<=r && Math.abs(y-a.y)<=r;
     })||null;
 }
+
 // ====================== ペン・ドラッグ・パン・変形 ======================
 let drawing = false;
 
 canvas.addEventListener("mousedown", e => {
     const {x,y}=getCanvasClickPosition(e);
 
-    // ハンドル操作時はツール解除（誤爆防止）
-    function clearTool() {
-        currentTool="none"; penMode=false; textAddMode=false;
-    }
+    // ★ 修正：ハンドル操作開始時にツール解除（誤爆防止）
+    const clearTool = () => clearToolSelection();
 
     if (selectedObject && selectedType) {
         const b=getBoundingBox(selectedObject,selectedType);
@@ -377,20 +386,29 @@ canvas.addEventListener("mousedown", e => {
 
     if (currentTool==="marker") {
         const hit=hitTestMarker(x,y);
-        if (hit){ saveHistory(); draggingMarker=hit;
-            dragOffsetX=x-hit.x; dragOffsetY=y-hit.y; return; }
+        if (hit){
+            clearTool();
+            saveHistory();
+            draggingMarker=hit;
+            dragOffsetX=x-hit.x; dragOffsetY=y-hit.y;
+            return;
+        }
     }
 
     if (currentTool==="arrow") {
         const hit=hitTestArrow(x,y);
         if (hit){
-            saveHistory(); draggingArrow=hit;
+            clearTool();
+            saveHistory();
+            draggingArrow=hit;
             dragOffsetX=x-hit.x; dragOffsetY=y-hit.y;
-            selectedObject=hit; selectedType="arrow"; return;
+            selectedObject=hit; selectedType="arrow";
+            return;
         }
     }
 
     if (currentTool==="pen") {
+        clearTool();
         drawing=true; saveHistory();
         penPaths.push({
             points:[{x,y}],
@@ -402,6 +420,7 @@ canvas.addEventListener("mousedown", e => {
     }
 
     if (currentTool==="pan") {
+        clearTool();
         isPanning=true;
         panStartX=e.clientX-offsetX;
         panStartY=e.clientY-offsetY;
@@ -449,7 +468,7 @@ canvas.addEventListener("mousemove", e => {
         drawCanvas(); return;
     }
 
-    if (drawing && currentTool==="pen") {
+    if (drawing) {
         penPaths[penPaths.length-1].points.push({x,y});
         drawCanvas(); return;
     }
@@ -485,7 +504,6 @@ document.getElementById("zoomResetBtn").onclick = () => {
     cancelTyping(); selectedObject=null; selectedType=null;
     saveHistory(); zoom=1.0; drawCanvas(); broadcastState();
 };
-
 // ====================== PNG書き出し ======================
 document.getElementById("exportPngBtn")?.addEventListener("click",()=>{
     cancelTyping(); selectedObject=null; selectedType=null;
