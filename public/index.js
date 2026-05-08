@@ -127,6 +127,39 @@ document.getElementById("presetFileInput").onchange = async e => {
 
     loadPresets();
 };
+async function loadSavedImages() {
+    const res = await fetch("/list");
+    const files = await res.json();
+
+    // カテゴリごとにグループ化
+    const groups = {};
+    files.forEach(f => {
+        if (!groups[f.category]) groups[f.category] = [];
+        groups[f.category].push(f);
+    });
+
+    const container = document.getElementById("savedImages");
+    container.innerHTML = "";
+
+    Object.keys(groups).forEach(cat => {
+        const section = document.createElement("div");
+        section.className = "categorySection";
+
+        section.innerHTML = `<h3>${cat}</h3>`;
+
+        groups[cat].forEach(f => {
+            const row = document.createElement("div");
+            row.className = "item-row";
+            row.innerHTML = `
+                <span>${f.title}</span>
+                <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
+            `;
+            section.appendChild(row);
+        });
+
+        container.appendChild(section);
+    });
+}
 
 // ===============================
 // 初期ロード
