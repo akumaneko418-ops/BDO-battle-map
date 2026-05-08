@@ -738,6 +738,42 @@ function updateCommentList(){
 }
 
 document.addEventListener("click",()=>hideAllMenus());
+// ====================== 保存処理（ここに追加） ======================
+document.getElementById("saveAllBtn").onclick = async () => {
+    cancelTyping();
+
+    const title = prompt("保存名を入力してください：");
+    if (!title) return;
+
+    const image = canvas.toDataURL("image/png");
+
+    const payload = {
+        title,
+        image,
+        markers,
+        comments: markerComments
+    };
+
+    const res = await fetch("/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    });
+
+    const json = await res.json();
+
+    if (json.success) {
+        alert("保存しました！");
+        location.href = "index.html";
+    } else {
+        alert("保存に失敗しました");
+    }
+};
+
+// ====================== 初期描画 ======================
+updateUndoRedoButtons();
+drawCanvas();
+updateCommentList();
 
 // ====================== 初期描画 ======================
 updateUndoRedoButtons();
