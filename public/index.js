@@ -29,7 +29,7 @@ document.getElementById("newCreateBtn").onclick = () => {
 };
 
 // ===============================
-// 保存済み画像一覧
+// 保存済み画像一覧（編集＋削除）
 // ===============================
 async function loadSavedImages() {
     const res = await fetch("/list");
@@ -44,7 +44,10 @@ async function loadSavedImages() {
 
         row.innerHTML = `
             <span>${f.title}</span>
-            <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
+            <div>
+                <button class="edit-btn" onclick="location.href='edit.html?id=${f.id}'">編集</button>
+                <button class="delete-btn" onclick="deleteImage('${f.id}')">削除</button>
+            </div>
         `;
 
         container.appendChild(row);
@@ -52,7 +55,22 @@ async function loadSavedImages() {
 }
 
 // ===============================
-// プリセット一覧
+// 保存済み画像削除
+// ===============================
+async function deleteImage(id) {
+    if (!confirm("本当に削除しますか？")) return;
+
+    await fetch("/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+    });
+
+    loadSavedImages();
+}
+
+// ===============================
+// プリセット一覧（クリックで編集画面へ）
 // ===============================
 async function loadPresets() {
     const res = await fetch("/listPresets");
@@ -66,7 +84,7 @@ async function loadPresets() {
         row.className = "item-row";
 
         row.innerHTML = `
-            <span>${f}</span>
+            <span class="preset-link" onclick="location.href='edit.html?preset=${f}'">${f}</span>
             <button onclick="deletePreset('${f}')">削除</button>
         `;
 
