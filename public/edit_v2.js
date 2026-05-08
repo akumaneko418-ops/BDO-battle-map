@@ -900,25 +900,6 @@ document.addEventListener("click", () => {
 });
 
 /* ============================================================
-   折り畳み UI
-============================================================ */
-document.querySelectorAll(".fold-header").forEach(header => {
-    header.addEventListener("click", (e) => {
-        if (e.target.classList.contains("tooltip")) return;
-
-        const content = header.nextElementSibling;
-        if (!content || !content.classList.contains("fold-content")) return;
-
-        content.classList.toggle("hidden");
-
-        const icon = header.querySelector(".fold-icon");
-        if (icon) {
-            icon.textContent = content.classList.contains("hidden") ? "▶" : "▼";
-        }
-    });
-});
-
-/* ============================================================
    初期状態
 ============================================================ */
 updateUndoRedoButtons();
