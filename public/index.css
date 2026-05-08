@@ -90,6 +90,13 @@ body {
     border-radius: 4px;
     cursor: pointer;
 }
+.saved-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+}
 
 /* 編集ボタン（青） */
 .edit-btn {
@@ -112,6 +119,9 @@ body {
     cursor: pointer;
 }
 
+.delete-btn:hover {
+    background: #c9302c;
+}
 /* プリセット名（クリック可能） */
 .preset-link {
     color: #4da3ff;
