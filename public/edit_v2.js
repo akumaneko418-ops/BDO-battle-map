@@ -518,8 +518,7 @@ document.getElementById("exportPngBtn").onclick = () => {
     a.download = `${title}.png`;
     a.click();
 };
-// ====================== 描画処理 ======================
-function drawCanvas() {
+
     // ====================== 描画処理 ======================
 function drawCanvas() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
