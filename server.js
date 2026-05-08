@@ -28,7 +28,7 @@ if (!fs.existsSync(PRESET_DIR)) fs.mkdirSync(PRESET_DIR);
 // 画像保存
 // ===============================
 app.post("/save", (req, res) => {
-  const { title, image, markers, comments } = req.body;
+  const { title, image, markers, comments, category } = req.body;
 
   if (!title || !image) {
     return res.status(400).json({ error: "title と image は必須です" });
@@ -45,6 +45,7 @@ app.post("/save", (req, res) => {
   const json = {
     id,
     title,
+    category,
     markers,
     comments,
     imagePath: `${id}.png`
