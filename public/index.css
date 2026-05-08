@@ -1,40 +1,81 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>BDO Battle Map - Image List</title>
-<link rel="stylesheet" href="index.css">
-</head>
-<body>
+.top-bar {
+    height: 56px;
+    background: #000;
+    color: #fff;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    font-weight: 700;
+}
 
-<!-- ★ 編集画面と統一したヘッダー -->
-<div class="top-bar">
-    BDO Battle Map - Image List
-</div>
+.page-container {
+    margin-top: 20px;
+    padding: 0 20px;
+    font-family: "Noto Sans JP", sans-serif;
+}
 
-<div class="page-container">
+.primary-btn {
+    padding: 8px 16px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
 
-<button id="newCreateBtn" class="primary-btn">＋ 新規作成</button>
+.right-btn {
+    padding: 4px 10px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
 
-<!-- ====================== 保存済み画像 ====================== -->
-<div class="fold-header">
-    <span class="fold-icon">▼</span> 保存済み画像
-</div>
-<div class="fold-content" id="savedImages"></div>
+.fold-header {
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
 
-<!-- ====================== プリセット画像管理 ====================== -->
-<div class="fold-header preset-header">
-    <div class="left">
-        <span class="fold-icon">▼</span> プリセット画像管理
-    </div>
-    <button id="addPresetBtn" class="right-btn">＋追加</button>
-    <input type="file" id="presetFileInput" accept="image/png" style="display:none;">
-</div>
+.fold-header .left {
+    display: flex;
+    align-items: center;
+}
 
-<div class="fold-content" id="presetList"></div>
+.fold-icon {
+    margin-right: 6px;
+}
 
-</div><!-- page-container -->
+.preset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-<script src="index.js"></script>
-</body>
-</html>
+.fold-content {
+    padding: 10px 20px;
+}
+
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.item-row button {
+    padding: 4px 8px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
