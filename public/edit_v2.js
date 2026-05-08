@@ -5,23 +5,26 @@ document.addEventListener("DOMContentLoaded", () => {
         fc.style.display = "none";
     });
 
+    // fold-icon をデフォルトで ▼ に統一
+    document.querySelectorAll(".fold-icon").forEach(icon => {
+        icon.textContent = "▼";
+    });
+
     // fold-header をクリックしたら fold-content を開閉
     document.querySelectorAll(".fold-header").forEach(header => {
         header.addEventListener("click", () => {
             const content = header.nextElementSibling;
             if (!content) return;
 
+            const icon = header.querySelector(".fold-icon");
+
             // 開閉
             if (content.style.display === "none") {
                 content.style.display = "block";
+                if (icon) icon.textContent = "▲"; // 開いたとき
             } else {
                 content.style.display = "none";
-            }
-
-            // ▼ / ▲ の切り替え（仕様に合わせて修正）
-            const icon = header.querySelector(".fold-icon");
-            if (icon) {
-                icon.textContent = (content.style.display === "none") ? "▼" : "▲";
+                if (icon) icon.textContent = "▼"; // 閉じたとき
             }
         });
     });
