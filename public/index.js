@@ -1,81 +1,115 @@
-.top-bar {
-    height: 56px;
-    background: #000;
-    color: #fff;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    padding-left: 20px;
-    font-weight: 700;
+// ===============================
+// 折りたたみ UI 初期化
+// ===============================
+function initFoldUI() {
+    document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "block");
+    document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
+
+    document.querySelectorAll(".fold-header").forEach(h => {
+        h.addEventListener("click", () => {
+            const content = h.nextElementSibling;
+            if (!content) return;
+
+            const icon = h.querySelector(".fold-icon");
+            const isOpen = content.style.display !== "none";
+
+            content.style.display = isOpen ? "none" : "block";
+            if (icon) icon.textContent = isOpen ? "▲" : "▼";
+        });
+    });
 }
 
-.page-container {
-    margin-top: 20px;
-    padding: 0 20px;
-    font-family: "Noto Sans JP", sans-serif;
+initFoldUI();
+
+// ===============================
+// 新規作成
+// ===============================
+document.getElementById("newCreateBtn").onclick = () => {
+    location.href = "edit.html";
+};
+
+// ===============================
+// 保存済み画像一覧
+// ===============================
+async function loadSavedImages() {
+    const res = await fetch("/list");
+    const files = await res.json();
+
+    const container = document.getElementById("savedImages");
+    container.innerHTML = "";
+
+    files.forEach(f => {
+        const row = document.createElement("div");
+        row.className = "item-row";
+
+        row.innerHTML = `
+            <span>${f.title}</span>
+            <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
+        `;
+
+        container.appendChild(row);
+    });
 }
 
-.primary-btn {
-    padding: 8px 16px;
-    background: #4da3ff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-bottom: 20px;
+// ===============================
+// プリセット一覧
+// ===============================
+async function loadPresets() {
+    const res = await fetch("/listPresets");
+    const files = await res.json();
+
+    const container = document.getElementById("presetList");
+    container.innerHTML = "";
+
+    files.forEach(f => {
+        const row = document.createElement("div");
+        row.className = "item-row";
+
+        row.innerHTML = `
+            <span>${f}</span>
+            <button onclick="deletePreset('${f}')">削除</button>
+        `;
+
+        container.appendChild(row);
+    });
 }
 
-.right-btn {
-    padding: 4px 10px;
-    background: #4da3ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+// ===============================
+// プリセット削除
+// ===============================
+async function deletePreset(name) {
+    await fetch("/deletePreset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+    });
+    loadPresets();
 }
 
-.fold-header {
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 20px;
-    padding: 10px;
-    background: #f0f0f0;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-}
+// ===============================
+// プリセット追加
+// ===============================
+document.getElementById("addPresetBtn").onclick = () => {
+    document.getElementById("presetFileInput").click();
+};
 
-.fold-header .left {
-    display: flex;
-    align-items: center;
-}
+document.getElementById("presetFileInput").onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-.fold-icon {
-    margin-right: 6px;
-}
+    const form = new FormData();
+    form.append("preset", file);
 
-.preset-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+    await fetch("/uploadPreset", {
+        method: "POST",
+        body: form
+    });
 
-.fold-content {
-    padding: 10px 20px;
-}
+    loadPresets();
+};
 
-.item-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #ddd;
-}
-
-.item-row button {
-    padding: 4px 8px;
-    background: #ff6b6b;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
+// ===============================
+// 初期ロード
+// ===============================
+loadSavedImages();
+loadPresets();
