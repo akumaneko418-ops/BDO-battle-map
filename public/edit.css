@@ -290,4 +290,53 @@ input[type="range"] {
 .fortress-color-buttons {
     margin-top: 6px;
 }
+/* ============================================================
+   コンパクト化（HTML と噛み合う完全版）
+============================================================ */
+
+/* 砦の名前と色の間隔を自然にする */
+.markerNameWrapper {
+    margin-bottom: 6px;
+}
+
+.colorPicker {
+    margin-top: 4px;
+}
+
+/* 全ツールの行間を詰める */
+.compact-row {
+    margin-bottom: 6px;
+}
+
+/* fold-content の内側余白を縮める */
+.fold-content {
+    padding: 4px 6px;
+}
+
+/* ラベルと入力欄の間隔を縮める */
+.fold-content label {
+    margin-bottom: 2px;
+    display: inline-block;
+}
+
+/* スライダーの上下余白を縮める */
+input[type="range"] {
+    margin: 2px 0;
+}
+
+/* 色ボタンを小さくする */
+.colorOption,
+.arrowColorOption,
+.textColorOption,
+.penColorOption {
+    width: 22px;
+    height: 22px;
+}
+
+/* ボタンをコンパクトに */
+button {
+    padding: 4px 6px;
+    font-size: 12px;
+    height: 26px;
+}
 
