@@ -282,4 +282,12 @@ input[type="range"] {
     display: flex;
     align-items: center;
 }
+/* 砦マーカー設定の間隔調整 */
+#fortressNameInput {
+    margin-bottom: 8px;
+}
+
+.fortress-color-buttons {
+    margin-top: 6px;
+}
 
