@@ -134,7 +134,7 @@ body {
     font-size: 26px !important;
     padding-left: 20px; /* 少しだけ余裕を持たせる */
 }
-.big-new-btn {
+.newbtn {
     width: 100%;
     padding: 18px 0;
     font-size: 20px;
@@ -147,7 +147,7 @@ body {
     margin-bottom: 16px;
 }
 
-.big-new-btn:hover {
+.newbtn:hover {
     background: #0066d6;
 }
 .edit-btn,
