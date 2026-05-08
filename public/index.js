@@ -29,41 +29,8 @@ document.getElementById("newBtn").onclick = () => {
 };
 
 // ===============================
-// 保存済み画像一覧
+// 保存済み画像削除
 // ===============================
-async function loadSavedImages() {
-    const res = await fetch("/list");
-    const data = await res.json();
-
-    const category = document.getElementById("categoryFilter").value;
-
-    const list = document.getElementById("savedList");
-    list.innerHTML = "";
-
-    data.forEach(item => {
-        if (category !== "all" && item.category !== category) return;
-
-        const div = document.createElement("div");
-        div.className = "saved-item";
-
-        div.innerHTML = `
-            <span class="saved-title">${item.title}</span>
-            <button class="edit-btn" data-id="${item.id}">編集</button>
-            <button class="delete-btn" data-id="${item.id}">削除</button>
-        `;
-
-        list.appendChild(div);
-    });
-
-    // 編集ボタン
-    document.querySelectorAll(".edit-btn").forEach(btn => {
-        btn.onclick = () => {
-            const id = btn.dataset.id;
-            location.href = `edit.html?id=${id}`;
-        };
-    });
-
-    // 削除ボタン
 async function deleteImage(id) {
     if (!confirm("本当に削除しますか？")) return;
 
@@ -83,6 +50,52 @@ async function deleteImage(id) {
     }
 }
 
+// ===============================
+// 保存済み画像一覧（カテゴリフィルタ対応）
+// ===============================
+async function loadSavedImages() {
+    const res = await fetch("/list");
+    const files = await res.json();
+
+    const category = document.getElementById("categoryFilter").value;
+    const container = document.getElementById("savedList");
+    container.innerHTML = "";
+
+    // カテゴリごとにグループ化
+    const groups = {};
+    files.forEach(f => {
+        if (!groups[f.category]) groups[f.category] = [];
+        groups[f.category].push(f);
+    });
+
+    Object.keys(groups).forEach(cat => {
+        if (category !== "all" && category !== cat) return;
+
+        const section = document.createElement("div");
+        section.className = "categorySection";
+        section.innerHTML = `<h3>${cat}</h3>`;
+
+        groups[cat].forEach(f => {
+            const row = document.createElement("div");
+            row.className = "item-row";
+
+            row.innerHTML = `
+                <span>${f.title}</span>
+                <div>
+                    <button class="edit-btn" onclick="location.href='edit.html?id=${f.id}'">編集</button>
+                    <button class="delete-btn" onclick="deleteImage('${f.id}')">削除</button>
+                </div>
+            `;
+
+            section.appendChild(row);
+        });
+
+        container.appendChild(section);
+    });
+}
+
+// カテゴリ変更時に再読み込み
+document.getElementById("categoryFilter").onchange = loadSavedImages;
 
 // ===============================
 // プリセット一覧
@@ -143,39 +156,6 @@ document.getElementById("presetFileInput").onchange = async e => {
 
     loadPresets();
 };
-async function loadSavedImages() {
-    const res = await fetch("/list");
-    const files = await res.json();
-
-    // カテゴリごとにグループ化
-    const groups = {};
-    files.forEach(f => {
-        if (!groups[f.category]) groups[f.category] = [];
-        groups[f.category].push(f);
-    });
-
-    const container = document.getElementById("savedList");
-    container.innerHTML = "";
-
-    Object.keys(groups).forEach(cat => {
-        const section = document.createElement("div");
-        section.className = "categorySection";
-
-        section.innerHTML = `<h3>${cat}</h3>`;
-
-        groups[cat].forEach(f => {
-            const row = document.createElement("div");
-            row.className = "item-row";
-            row.innerHTML = `
-                <span>${f.title}</span>
-                <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
-            `;
-            section.appendChild(row);
-        });
-
-        container.appendChild(section);
-    });
-}
 
 // ===============================
 // 初期ロード
