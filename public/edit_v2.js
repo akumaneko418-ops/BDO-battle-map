@@ -737,7 +737,8 @@ function updateCommentList(){
 }
 
 document.addEventListener("click",()=>hideAllMenus());
-// ====================== 保存処理（ここに追加） ======================
+
+// ====================== 保存処理 ======================
 let currentTitle = null;
 
 document.getElementById("saveAllBtn").onclick = async () => {
@@ -746,7 +747,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
     const title = prompt("保存名を入力してください：");
     if (!title) return;
 
-    currentTitle = title; // ← 保存名を記録（PNG出力と連動）
+    currentTitle = title; // ← これが PNG 出力名と連動する
 
     const image = canvas.toDataURL("image/png");
 
@@ -772,6 +773,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
         alert("保存に失敗しました");
     }
 };
+
 
 // ====================== 初期描画 ======================
 updateUndoRedoButtons();
