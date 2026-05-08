@@ -773,7 +773,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
     category: document.getElementById("categorySelect").value, // ★ 追加
     image: canvas.toDataURL(),
     markers,
-    comments
+    comments:markerComments
 })
 
     });
