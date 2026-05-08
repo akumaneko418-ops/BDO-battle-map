@@ -267,3 +267,14 @@ input[type="range"] {
     line-height: 32px;
     white-space: nowrap;
 }
+.help-btn {
+    display: inline-block;
+    font-size: 10px;
+    background: #e0e0e0;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+    cursor: default;
+    line-height: 1.2;
+}
