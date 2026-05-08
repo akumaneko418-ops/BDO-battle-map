@@ -1,6 +1,5 @@
-document.addEventListener("DOMContentLoaded", () => {
-
-    // 右パネルの fold-content をデフォルトで閉じる
+// 右パネルの fold-content をデフォルトで閉じる
+function initFoldUI() {
     document.querySelectorAll(".fold-content").forEach(fc => {
         fc.style.display = "none";
     });
@@ -28,8 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+}
 
-});
 
 
     /* ============================================================
@@ -925,5 +924,3 @@ document.querySelectorAll(".fold-header").forEach(header => {
 updateUndoRedoButtons();
 drawCanvas();
 updateCommentList();
-
-});
