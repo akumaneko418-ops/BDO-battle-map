@@ -37,8 +37,8 @@ body {
 }
 
 .fileNameInput {
-    flex: 0 0 75% !important;
-    max-width: 75% !important;
+    flex: 0 0 40% !important;
+    max-width: 40% !important;
 }
 
 .zoomTool {
