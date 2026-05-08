@@ -71,6 +71,7 @@
     border-bottom: 1px solid #ddd;
 }
 
+/* 既存の item-row button は削除ボタン用として残す */
 .item-row button {
     padding: 4px 8px;
     background: #ff6b6b;
@@ -78,4 +79,32 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
+}
+
+/* 編集ボタン（青） */
+.edit-btn {
+    padding: 4px 8px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 6px;
+}
+
+/* 削除ボタン（赤） */
+.delete-btn {
+    padding: 4px 8px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* プリセット名（クリック可能） */
+.preset-link {
+    color: #4da3ff;
+    cursor: pointer;
+    text-decoration: underline;
 }
