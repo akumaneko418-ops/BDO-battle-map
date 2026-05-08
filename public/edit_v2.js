@@ -116,6 +116,7 @@ let currentArrowColor = "#ff7eb9", currentArrowOpacity = 1.0, currentArrowScale 
 let currentTextColor = "#ff7eb9", currentTextSize = 16;
 let penMode = false, currentPenColor = "#ff7eb9", currentPenWidth = 3, currentPenOpacity = 1.0;
 let textAddMode = false;
+let erasing = false; // ★ 消しゴムモード中フラグ
 
 document.getElementById("penClearBtn").onclick = () => {
     cancelTyping(); saveHistory(); penPaths = []; drawCanvas(); broadcastState();
@@ -416,6 +417,45 @@ canvas.addEventListener("mousedown", e => {
         });
         return;
     }
+    if (currentTool === "eraser") {
+        erasing = true;
+        saveHistory();
+
+        // ★ マーカー削除
+        const hitM = hitTestMarker(x, y);
+        if (hitM) {
+            markers = markers.filter(m => m !== hitM);
+            delete markerComments[hitM.id];
+            drawCanvas();
+            updateCommentList();
+            broadcastState();
+            return;
+        }
+
+        // ★ 矢印削除
+        const hitA = hitTestArrow(x, y);
+        if (hitA) {
+            arrows = arrows.filter(a => a !== hitA);
+            drawCanvas();
+            broadcastState();
+            return;
+        }
+
+        // ★ テキスト削除
+        const hitT = texts.find(t => {
+            const b = getBoundingBox(t, "text");
+            return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+        });
+        if (hitT) {
+            texts = texts.filter(t => t !== hitT);
+            drawCanvas();
+            broadcastState();
+            return;
+        }
+
+        // ★ ペン線は mousemove で削除
+        return;
+    }
 
     if (currentTool==="pan") {
         clearTool();
@@ -470,6 +510,24 @@ canvas.addEventListener("mousemove", e => {
         penPaths[penPaths.length-1].points.push({x,y});
         drawCanvas(); return;
     }
+    if (erasing) {
+        const threshold = 12; // 消しゴムの当たり判定半径
+
+        // ★ ペン線削除
+        penPaths.forEach(path => {
+            path.points = path.points.filter(pt => {
+                const dx = pt.x - x;
+                const dy = pt.y - y;
+                return Math.sqrt(dx*dx + dy*dy) > threshold;
+            });
+        });
+
+        // 空になったパスを削除
+        penPaths = penPaths.filter(p => p.points.length > 0);
+
+        drawCanvas();
+        return;
+    }
 
     if (isPanning) {
         offsetX=e.clientX-panStartX;
@@ -487,6 +545,7 @@ canvas.addEventListener("mouseup", () => {
     if (changed) {
         drawCanvas(); broadcastState(); updateCommentList();
     }
+    erasing = false;
 });
 
 // ====================== ズーム ======================
