@@ -150,3 +150,18 @@ body {
 .big-new-btn:hover {
     background: #0066d6;
 }
+.edit-btn,
+.editPresetBtn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.edit-btn:hover,
+.editPresetBtn:hover {
+    background: #0066d6;
+}
