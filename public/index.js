@@ -1,99 +1,81 @@
-// ====================== Fold UI ======================
-function initFoldUI() {
-    document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "block");
-    document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
-
-    document.querySelectorAll(".fold-header").forEach(h => {
-        h.addEventListener("click", () => {
-            const c = h.nextElementSibling;
-            if (!c) return;
-            const icon = h.querySelector(".fold-icon");
-            const open = c.style.display === "none";
-            c.style.display = open ? "block" : "none";
-            if (icon) icon.textContent = open ? "▼" : "▲";
-        });
-    });
+.top-bar {
+    height: 56px;
+    background: #000;
+    color: #fff;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    font-weight: 700;
 }
 
-initFoldUI();
-
-// ====================== 新規作成 ======================
-document.getElementById("newCreateBtn").onclick = () => {
-    location.href = "edit.html";
-};
-
-// ====================== 保存済み画像一覧 ======================
-async function loadSavedImages() {
-    const res = await fetch("/listSavedImages");
-    const files = await res.json();
-
-    const container = document.getElementById("savedImages");
-    container.innerHTML = "";
-
-    files.forEach(f => {
-        const row = document.createElement("div");
-        row.className = "item-row";
-
-        row.innerHTML = `
-            <span>${f}</span>
-            <button onclick="location.href='edit.html?file=${f}'">編集</button>
-        `;
-
-        container.appendChild(row);
-    });
+.page-container {
+    margin-top: 20px;
+    padding: 0 20px;
+    font-family: "Noto Sans JP", sans-serif;
 }
 
-// ====================== プリセット画像一覧 ======================
-async function loadPresets() {
-    const res = await fetch("/listPresets");
-    const files = await res.json();
-
-    const container = document.getElementById("presetList");
-    container.innerHTML = "";
-
-    files.forEach(f => {
-        const row = document.createElement("div");
-        row.className = "item-row";
-
-        row.innerHTML = `
-            <span>${f}</span>
-            <button onclick="deletePreset('${f}')">削除</button>
-        `;
-
-        container.appendChild(row);
-    });
+.primary-btn {
+    padding: 8px 16px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 20px;
 }
 
-// ====================== プリセット削除 ======================
-async function deletePreset(name) {
-    await fetch("/deletePreset", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ name })
-    });
-    loadPresets();
+.right-btn {
+    padding: 4px 10px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
-// ====================== プリセット追加 ======================
-document.getElementById("addPresetBtn").onclick = () => {
-    document.getElementById("presetFileInput").click();
-};
+.fold-header {
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
 
-document.getElementById("presetFileInput").onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
+.fold-header .left {
+    display: flex;
+    align-items: center;
+}
 
-    const form = new FormData();
-    form.append("preset", file);
+.fold-icon {
+    margin-right: 6px;
+}
 
-    await fetch("/uploadPreset", {
-        method: "POST",
-        body: form
-    });
+.preset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
 
-    loadPresets();
-};
+.fold-content {
+    padding: 10px 20px;
+}
 
-// ====================== 初期ロード ======================
-loadSavedImages();
-loadPresets();
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.item-row button {
+    padding: 4px 8px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
