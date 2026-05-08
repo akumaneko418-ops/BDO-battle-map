@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // ▼ / ▶ の切り替え
             const icon = header.querySelector(".fold-icon");
             if (icon) {
-                icon.textContent = (content.style.display === "none") ? "▶" : "▼";
+                icon.textContent = (content.style.display === "none") ? "▲" : "▼";
             }
         });
     });
