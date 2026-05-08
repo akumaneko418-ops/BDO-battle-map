@@ -1,3 +1,8 @@
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
 .top-bar {
     height: 56px !important;
     font-size: 20px !important;
