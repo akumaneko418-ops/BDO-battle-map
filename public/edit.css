@@ -49,8 +49,8 @@ body {
 .saveButton {
     background: #007bff;
     color: #fff;
-    font-size:15px;
-   padding:10px 20px;
+    font-size: 15px;
+    padding: 10px 20px;
 }
 
 /* ============================================================
@@ -102,46 +102,25 @@ body {
 }
 
 /* ============================================================
-   折りたたみ UI
+   折りたたみ UI（完全修正版）
 ============================================================ */
 .fold-header {
     background: #eee;
-    padding: 8px;
+    padding: 6px 8px;
     margin-top: 12px;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 700;
-    display: flex;
-    justify-content: space-between;
+    display: flex !important;
     align-items: center;
-    position: relative;
+    justify-content: space-between;
 }
 
-.fold-content {
-    padding: 10px 6px;
+.section-title {
+    display: inline-flex;
+    align-items: center;
 }
 
-.fold-content.hidden {
-    display: none;
-}
-
-/* ホバー説明（砦マーカー？） */
-.fold-header .tooltip {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: #333;
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 6px;
-    white-space: nowrap;
-    z-index: 9999;
-}
-
-.fold-header:hover .tooltip {
-    display: block;
-}
 .help-btn {
     display: inline-flex;
     align-items: center;
@@ -156,6 +135,7 @@ body {
     position: relative;
 }
 
+/* tooltip（help-btn のみ対象） */
 .help-btn .tooltip {
     display: none;
     position: absolute;
@@ -174,6 +154,10 @@ body {
     display: block;
 }
 
+.fold-content {
+    padding: 6px 8px;
+    margin-bottom: 4px;
+}
 
 /* ============================================================
    ボタン
@@ -284,43 +268,13 @@ input[type="range"] {
 .contextMenu div:hover {
     background: #eee;
 }
-.help-btn {
-    background: #ddd;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 6px;
-    font-weight: 700;
-    border: 1px solid #bbb;
-    cursor: default;
-}
+
+/* ============================================================
+   ツールバーのボタン調整
+============================================================ */
 .canvas-toolbar button {
     height: 32px;
     padding: 0 10px;
     line-height: 32px;
     white-space: nowrap;
-}
-.help-btn {
-    display: inline-block;
-    font-size: 10px;
-    background: #e0e0e0;
-    border: 1px solid #bbb;
-    border-radius: 3px;
-    padding: 0 4px;
-    margin-left: 4px;
-    cursor: default;
-    line-height: 1.2;
-}
-.fold-header {
-    padding: 4px 6px;
-    font-size: 13px;
-}
-
-.fold-content {
-    padding: 6px 8px;
-    margin-bottom: 4px;
-}
-.fold-header {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
 }
