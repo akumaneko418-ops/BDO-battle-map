@@ -33,38 +33,53 @@ document.getElementById("newCreateBtn").onclick = () => {
 // ===============================
 async function loadSavedImages() {
     const res = await fetch("/list");
-    const files = await res.json();
+    const data = await res.json();
 
-    const container = document.getElementById("savedImages");
-    container.innerHTML = "";
+    const category = document.getElementById("categoryFilter").value;
 
-    files.forEach(f => {
-        const row = document.createElement("div");
-        row.className = "item-row";
+    const list = document.getElementById("savedList");
+    list.innerHTML = "";
 
-        row.innerHTML = `
-            <span>${f.title}</span>
-            <div>
-                <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
-                <button onclick="deleteImage('${f.id}')">削除</button>
-            </div>
+    data.forEach(item => {
+        if (category !== "all" && item.category !== category) return;
+
+        const div = document.createElement("div");
+        div.className = "saved-item";
+
+        div.innerHTML = `
+            <span class="saved-title">${item.title}</span>
+            <button class="edit-btn" data-id="${item.id}">編集</button>
+            <button class="delete-btn" data-id="${item.id}">削除</button>
         `;
 
-        container.appendChild(row);
-    });
-}
-
-// ★ 追加：削除処理
-async function deleteImage(id) {
-    if (!confirm("本当に削除しますか？")) return;
-
-    await fetch("/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id })
+        list.appendChild(div);
     });
 
-    loadSavedImages();
+    // 編集ボタン
+    document.querySelectorAll(".edit-btn").forEach(btn => {
+        btn.onclick = () => {
+            const id = btn.dataset.id;
+            location.href = `edit.html?id=${id}`;
+        };
+    });
+
+    // 削除ボタン
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.onclick = async () => {
+            const id = btn.dataset.id;
+            if (!confirm("本当に削除しますか？")) return;
+
+            const res = await fetch(`/delete?id=${id}`, { method: "DELETE" });
+            const json = await res.json();
+
+            if (json.success) {
+                alert("削除しました");
+                loadSavedImages();
+            } else {
+                alert("削除に失敗しました");
+            }
+        };
+    });
 }
 
 // ===============================
