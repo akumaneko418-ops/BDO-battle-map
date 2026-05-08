@@ -505,18 +505,17 @@ document.getElementById("zoomResetBtn").onclick = () => {
     saveHistory(); zoom=1.0; drawCanvas(); broadcastState();
 };
 // ====================== PNG書き出し ======================
-document.getElementById("exportPngBtn")?.addEventListener("click",()=>{
-    cancelTyping(); selectedObject=null; selectedType=null;
-    canvas.toBlob(b=>{
-        if(!b)return;
-        const url=URL.createObjectURL(b);
-        const a=document.createElement("a");
-        a.href=url; a.download=`${title}.png`;
-        document.body.appendChild(a); a.click(); a.remove();
-        URL.revokeObjectURL(url);
-    });
-});
+document.getElementById("exportPngBtn").onclick = () => {
+    cancelTyping();
 
+    let title = prompt("ファイル名を入力してください：");
+    if (!title) title = "battle-map";
+
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `${title}.png`;
+    a.click();
+};
 // ====================== 描画処理 ======================
 function drawCanvas() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
