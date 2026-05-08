@@ -702,7 +702,14 @@ function drawCanvas() {
 /* ============================================================
    画像ドラッグ＆ドロップ
 ============================================================ */
-document.body.addEventListener("dragover", (e) => e.preventDefault());
+
+/* ブラウザのデフォルト動作（画像を開く）を完全に無効化 */
+window.addEventListener("dragover", e => e.preventDefault(), false);
+window.addEventListener("drop", e => e.preventDefault(), false);
+document.body.addEventListener("dragover", e => e.preventDefault());
+document.body.addEventListener("drop", e => e.preventDefault());
+
+/* キャンバスへの画像ドロップ処理（元からある処理） */
 document.body.addEventListener("drop", (e) => {
     e.preventDefault();
 
@@ -727,6 +734,7 @@ document.body.addEventListener("drop", (e) => {
     };
     reader.readAsDataURL(file);
 });
+
 
 /* ============================================================
    ★ 右クリックメニュー
