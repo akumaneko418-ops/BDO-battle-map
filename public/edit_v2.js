@@ -780,7 +780,3 @@ updateUndoRedoButtons();
 drawCanvas();
 updateCommentList();
 
-// ====================== 初期描画 ======================
-updateUndoRedoButtons();
-drawCanvas();
-updateCommentList();
