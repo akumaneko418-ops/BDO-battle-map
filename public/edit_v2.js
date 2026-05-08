@@ -1,111 +1,64 @@
-// 右パネルの fold-content をデフォルトで閉じる
+// ====================== Fold UI ======================
 function initFoldUI() {
-    document.querySelectorAll(".fold-content").forEach(fc => {
-        fc.style.display = "none";
-    });
-
-    // fold-icon をデフォルトで ▼ に統一
-    document.querySelectorAll(".fold-icon").forEach(icon => {
-        icon.textContent = "▼";
-    });
-
-    // fold-header をクリックしたら fold-content を開閉
-    document.querySelectorAll(".fold-header").forEach(header => {
-        header.addEventListener("click", () => {
-            const content = header.nextElementSibling;
-            if (!content) return;
-
-            const icon = header.querySelector(".fold-icon");
-
-            // 開閉
-            if (content.style.display === "none") {
-                content.style.display = "block";
-                if (icon) icon.textContent = "▲"; // 開いたとき
-            } else {
-                content.style.display = "none";
-                if (icon) icon.textContent = "▼"; // 閉じたとき
-            }
+    document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "none");
+    document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
+    document.querySelectorAll(".fold-header").forEach(h => {
+        h.addEventListener("click", () => {
+            const c = h.nextElementSibling;
+            if (!c) return;
+            const icon = h.querySelector(".fold-icon");
+            const open = c.style.display === "none";
+            c.style.display = open ? "block" : "none";
+            if (icon) icon.textContent = open ? "▲" : "▼";
         });
     });
 }
 
-/* ============================================================
-   初期設定
-============================================================ */
-
+// ====================== 初期設定 ======================
 const socket = io();
-
-let zoom = 1.0;
-let zoomStep = 0.1;
-
+let zoom = 1.0, zoomStep = 0.1;
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
-
 let backgroundImage = null;
+let offsetX = 0, offsetY = 0, isPanning = false, panStartX = 0, panStartY = 0;
 
-/* パン用 */
-let offsetX = 0;
-let offsetY = 0;
-let isPanning = false;
-let panStartX = 0;
-let panStartY = 0;
+let markers = [], arrows = [], texts = [], penPaths = [];
+let markerComments = {}, highlightedMarkerId = null;
 
-/* データ構造 */
-let markers = [];
-let arrows = [];
-let texts = [];
-let penPaths = [];
-let markerComments = {};
-let highlightedMarkerId = null;
+let selectedObject = null, selectedType = null;
+let transformMode = null, transformStart = null;
 
-// 選択・変形用
-let selectedObject = null;
-let selectedType = null; // "arrow" | "text"
-let transformMode = null; // "move" | "scale" | "rotate"
-let transformStart = null;
-
-// ★★★ これが絶対に必要 ★★★
 initFoldUI();
 
-
-/* ============================================================
-   Undo / Redo
-============================================================ */
-let history = [];
-let redoHistory = [];
+// ====================== Undo / Redo ======================
+let history = [], redoHistory = [];
 
 function getCurrentState() {
     return {
-        markers: JSON.parse(JSON.stringify(markers)),
-        arrows: JSON.parse(JSON.stringify(arrows)),
-        texts: JSON.parse(JSON.stringify(texts)),
-        penPaths: JSON.parse(JSON.stringify(penPaths)),
+        markers: structuredClone(markers),
+        arrows: structuredClone(arrows),
+        texts: structuredClone(texts),
+        penPaths: structuredClone(penPaths),
         backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
-        zoom,
-        offsetX,
-        offsetY,
-        markerComments: JSON.parse(JSON.stringify(markerComments))
+        zoom, offsetX, offsetY,
+        markerComments: structuredClone(markerComments)
     };
 }
 
-function restoreState(state) {
-    markers = state.markers || [];
-    arrows = state.arrows || [];
-    texts = state.texts || [];
-    penPaths = state.penPaths || [];
-    zoom = state.zoom || 1;
-    offsetX = state.offsetX || 0;
-    offsetY = state.offsetY || 0;
-    markerComments = state.markerComments || {};
+function restoreState(s) {
+    markers = s.markers || [];
+    arrows = s.arrows || [];
+    texts = s.texts || [];
+    penPaths = s.penPaths || [];
+    zoom = s.zoom || 1;
+    offsetX = s.offsetX || 0;
+    offsetY = s.offsetY || 0;
+    markerComments = s.markerComments || {};
 
-    if (state.backgroundImageSrc) {
+    if (s.backgroundImageSrc) {
         const img = new Image();
-        img.onload = () => {
-            backgroundImage = img;
-            drawCanvas();
-            updateCommentList();
-        };
-        img.src = state.backgroundImageSrc;
+        img.onload = () => { backgroundImage = img; drawCanvas(); updateCommentList(); };
+        img.src = s.backgroundImageSrc;
     } else {
         backgroundImage = null;
         drawCanvas();
@@ -120,1088 +73,655 @@ function saveHistory() {
     updateUndoRedoButtons();
 }
 
-function broadcastState() {
-    socket.emit("edit_state", getCurrentState());
-}
+function broadcastState() { socket.emit("edit_state", getCurrentState()); }
+socket.on("edit_state", restoreState);
 
-socket.on("edit_state", (state) => {
-    restoreState(state);
-});
-
-/* Undo / Redo ボタン */
 document.getElementById("undoBtn").onclick = () => {
     cancelTyping();
-    if (history.length === 0) return;
-    const current = JSON.stringify(getCurrentState());
-    redoHistory.push(current);
-
-    const last = history.pop();
-    restoreState(JSON.parse(last));
+    if (!history.length) return;
+    redoHistory.push(JSON.stringify(getCurrentState()));
+    restoreState(JSON.parse(history.pop()));
     updateUndoRedoButtons();
     broadcastState();
 };
 
 document.getElementById("redoBtn").onclick = () => {
     cancelTyping();
-    if (redoHistory.length === 0) return;
-    const current = JSON.stringify(getCurrentState());
-    history.push(current);
-
-    const next = redoHistory.pop();
-    restoreState(JSON.parse(next));
+    if (!redoHistory.length) return;
+    history.push(JSON.stringify(getCurrentState()));
+    restoreState(JSON.parse(redoHistory.pop()));
     updateUndoRedoButtons();
     broadcastState();
 };
 
 function updateUndoRedoButtons() {
-    document.getElementById("undoBtn").classList.toggle("disabled", history.length === 0);
-    document.getElementById("redoBtn").classList.toggle("disabled", redoHistory.length === 0);
+    document.getElementById("undoBtn").classList.toggle("disabled", !history.length);
+    document.getElementById("redoBtn").classList.toggle("disabled", !redoHistory.length);
 }
 
-/* ============================================================
-   現在のツール
-============================================================ */
+// ====================== ツール設定 ======================
 let currentTool = "none";
-
-let currentMarkerColor = "#ff7eb9";
-let currentMarkerOpacity = 1.0;
-let currentMarkerSize = 10;
-
-let currentArrowColor = "#ff7eb9";
-let currentArrowOpacity = 1.0;
-let currentArrowScale = 1.0;
-
-let currentTextColor = "#ff7eb9";
-let currentTextSize = 16;
-
-let penMode = false;
-let currentPenColor = "#ff7eb9";
-let currentPenWidth = 3;
-let currentPenOpacity = 1.0;
-
+let currentMarkerColor = "#ff7eb9", currentMarkerOpacity = 1.0, currentMarkerSize = 10;
+let currentArrowColor = "#ff7eb9", currentArrowOpacity = 1.0, currentArrowScale = 1.0;
+let currentTextColor = "#ff7eb9", currentTextSize = 16;
+let penMode = false, currentPenColor = "#ff7eb9", currentPenWidth = 3, currentPenOpacity = 1.0;
 let textAddMode = false;
 
-/* ペンのクリア */
 document.getElementById("penClearBtn").onclick = () => {
-    cancelTyping();
-    saveHistory();
-    penPaths = [];
-    drawCanvas();
-    broadcastState();
+    cancelTyping(); saveHistory(); penPaths = []; drawCanvas(); broadcastState();
 };
-   
-/* ============================================================
-   カラーピッカー（最新選択を優先）
-============================================================ */
-function activateColor(el, selector) {
-    // 全カテゴリの selected を解除
-    document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
-        .forEach(btn => btn.classList.remove("selected"));
 
-    // 今選んだカテゴリだけ選択状態にする
+function activateColor(el) {
+    document.querySelectorAll(".colorOption,.arrowColorOption,.textColorOption,.penColorOption")
+        .forEach(b => b.classList.remove("selected"));
     el.classList.add("selected");
 }
 
-/* 砦マーカー色 */
-document.querySelectorAll(".colorOption").forEach((el) => {
-    el.addEventListener("click", () => {
-        cancelTyping();
-        selectedObject = null;
-        selectedType = null;
+document.querySelectorAll(".colorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
         currentMarkerColor = getComputedStyle(el).backgroundColor;
-        activateColor(el, ".colorOption");
-        currentTool = "marker";
-        penMode = false;
-        textAddMode = false;
+        activateColor(el); currentTool = "marker"; penMode = false; textAddMode = false;
         drawCanvas();
-    });
+    };
 });
 
-/* 矢印色 */
-document.querySelectorAll(".arrowColorOption").forEach((el) => {
-    el.addEventListener("click", () => {
-        cancelTyping();
-        selectedObject = null;
-        selectedType = null;
+document.querySelectorAll(".arrowColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
         currentArrowColor = getComputedStyle(el).backgroundColor;
-        activateColor(el, ".arrowColorOption");
-        currentTool = "arrow";
-        penMode = false;
-        textAddMode = false;
+        activateColor(el); currentTool = "arrow"; penMode = false; textAddMode = false;
         drawCanvas();
-    });
+    };
 });
 
-/* テキスト色 */
-document.querySelectorAll(".textColorOption").forEach((el) => {
-    el.addEventListener("click", () => {
-        cancelTyping();
-        selectedObject = null;
-        selectedType = null;
+document.querySelectorAll(".textColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
         currentTextColor = getComputedStyle(el).backgroundColor;
-        activateColor(el, ".textColorOption");
-        currentTool = "text";
-        textAddMode = true;
-        penMode = false;
+        activateColor(el); currentTool = "text"; textAddMode = true; penMode = false;
         drawCanvas();
-    });
+    };
 });
 
-/* ペン色 */
-document.querySelectorAll(".penColorOption").forEach((el) => {
-    el.addEventListener("click", () => {
-        cancelTyping();
-        selectedObject = null;
-        selectedType = null;
+document.querySelectorAll(".penColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
         currentPenColor = getComputedStyle(el).backgroundColor;
-        activateColor(el, ".penColorOption");
-        currentTool = "pen";
-        penMode = true;
-        textAddMode = false;
+        activateColor(el); currentTool = "pen"; penMode = true; textAddMode = false;
         drawCanvas();
-    });
+    };
 });
 
-/* ============================================================
-   スライダー
-============================================================ */
-document.getElementById("markerSizeSlider").addEventListener("input", (e) => {
-    currentMarkerSize = Number(e.target.value);
-});
-
-document.getElementById("arrowSizeSlider").addEventListener("input", (e) => {
-    currentArrowScale = Number(e.target.value);
-});
-
-document.getElementById("markerOpacitySlider").addEventListener("input", (e) => {
-    currentMarkerOpacity = Number(e.target.value);
+// ====================== スライダー ======================
+document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
+document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
+document.getElementById("markerOpacitySlider").oninput = e => {
+    currentMarkerOpacity = +e.target.value;
     document.getElementById("markerOpacityValue").textContent = currentMarkerOpacity.toFixed(2);
-});
-
-document.getElementById("arrowOpacitySlider").addEventListener("input", (e) => {
-    currentArrowOpacity = Number(e.target.value);
+};
+document.getElementById("arrowOpacitySlider").oninput = e => {
+    currentArrowOpacity = +e.target.value;
     document.getElementById("arrowOpacityValue").textContent = currentArrowOpacity.toFixed(2);
-});
-
-document.getElementById("penOpacitySlider").addEventListener("input", (e) => {
-    currentPenOpacity = Number(e.target.value);
+};
+document.getElementById("penOpacitySlider").oninput = e => {
+    currentPenOpacity = +e.target.value;
     document.getElementById("penOpacityValue").textContent = currentPenOpacity.toFixed(2);
-});
+};
+document.getElementById("textSizeSlider").oninput = e => currentTextSize = +e.target.value;
+document.getElementById("penWidthSlider").oninput = e => currentPenWidth = +e.target.value;
 
-document.getElementById("textSizeSlider").addEventListener("input", (e) => {
-    currentTextSize = Number(e.target.value);
-});
-
-document.getElementById("penWidthSlider").addEventListener("input", (e) => {
-    currentPenWidth = Number(e.target.value);
-});
-
-/* ============================================================
-   クリック座標
-============================================================ */
+// ====================== 座標変換 ======================
 function getCanvasClickPosition(e) {
     const rect = canvas.getBoundingClientRect();
-
     const rawX = e.clientX - rect.left - offsetX;
     const rawY = e.clientY - rect.top - offsetY;
-
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-
-    const x = (rawX - cx) / zoom + cx;
-    const y = (rawY - cy) / zoom + cy;
-
-    return { x, y };
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    return { x: (rawX - cx) / zoom + cx, y: (rawY - cy) / zoom + cy };
 }
 
-/* ============================================================
-   テキスト入力
-============================================================ */
-let typing = false;
-let typingText = "";
-let typingX = 0;
-let typingY = 0;
+// ====================== テキスト入力 ======================
+let typing = false, typingText = "", typingX = 0, typingY = 0;
 
 function cancelTyping() {
-    if (typing) {
-        typing = false;
-        typingText = "";
-        drawCanvas();
-    }
+    if (typing) { typing = false; typingText = ""; drawCanvas(); }
 }
 
-document.addEventListener("keydown", (e) => {
+document.addEventListener("keydown", e => {
     if (!typing) return;
-
     if (e.key === "Enter") {
-        if (typingText.trim() !== "") {
+        if (typingText.trim()) {
             saveHistory();
             texts.push({
                 id: "text_" + Date.now(),
-                x: typingX,
-                y: typingY,
+                x: typingX, y: typingY,
                 text: typingText,
                 color: currentTextColor,
                 size: currentTextSize,
                 angle: 0
             });
-            typing = false;
-            typingText = "";
-            drawCanvas();
             broadcastState();
-        } else {
-            typing = false;
-            typingText = "";
-            drawCanvas();
         }
-        e.preventDefault();
-        return;
+        typing = false; typingText = ""; drawCanvas(); e.preventDefault(); return;
     }
-
-    if (e.key === "Escape") {
-        typing = false;
-        typingText = "";
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key === "Backspace") {
-        typingText = typingText.slice(0, -1);
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key.length === 1) {
-        typingText += e.key;
-        drawCanvas();
-        e.preventDefault();
-    }
+    if (e.key === "Escape") { typing = false; typingText = ""; drawCanvas(); e.preventDefault(); return; }
+    if (e.key === "Backspace") { typingText = typingText.slice(0, -1); drawCanvas(); e.preventDefault(); return; }
+    if (e.key.length === 1) { typingText += e.key; drawCanvas(); e.preventDefault(); }
 });
 
-/* ============================================================
-   バウンディングボックス & ハンドル
-============================================================ */
+// ====================== バウンディングボックス ======================
 function getBoundingBox(obj, type) {
     if (type === "arrow") {
         const s = 25 * (obj.scale || 1);
-        return {
-            x: obj.x - s,
-            y: obj.y - s,
-            w: s * 2,
-            h: s * 2
-        };
+        return { x: obj.x - s, y: obj.y - s, w: s * 2, h: s * 2 };
     }
-
     if (type === "text") {
         ctx.save();
-        ctx.font = `700 ${obj.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
-        const width = ctx.measureText(obj.text).width;
+        ctx.font = `700 ${obj.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        const w = ctx.measureText(obj.text).width;
         ctx.restore();
-        return {
-            x: obj.x,
-            y: obj.y - obj.size,
-            w: width,
-            h: obj.size
-        };
+        return { x: obj.x, y: obj.y - obj.size, w, h: obj.size };
     }
-
     return { x: 0, y: 0, w: 0, h: 0 };
 }
 
 function drawTransformHandles(obj, type) {
-    const box = getBoundingBox(obj, type);
-    if (!box) return;
-
+    const b = getBoundingBox(obj, type);
     ctx.save();
-    ctx.strokeStyle = "#4da3ff";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#4da3ff"; ctx.lineWidth = 2;
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
 
-    // 枠線
-    ctx.strokeRect(box.x, box.y, box.w, box.h);
-
-    // 四隅ハンドル
     const size = 8;
-    const handles = [
-        [box.x, box.y],
-        [box.x + box.w, box.y],
-        [box.x, box.y + box.h],
-        [box.x + box.w, box.y + box.h]
-    ];
-
-    ctx.fillStyle = "#4da3ff";
-    handles.forEach(([hx, hy]) => {
-        ctx.fillRect(hx - size / 2, hy - size / 2, size, size);
+    [[b.x,b.y],[b.x+b.w,b.y],[b.x,b.y+b.h],[b.x+b.w,b.y+b.h]].forEach(([hx,hy])=>{
+        ctx.fillStyle="#4da3ff"; ctx.fillRect(hx-size/2,hy-size/2,size,size);
     });
 
-    // 回転ハンドル（上中央）
-    const rx = box.x + box.w / 2;
-    const ry = box.y - 20;
-
-    ctx.beginPath();
-    ctx.arc(rx, ry, 6, 0, Math.PI * 2);
-    ctx.fill();
-
+    const rx = b.x + b.w/2, ry = b.y - 20;
+    ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI*2); ctx.fillStyle="#4da3ff"; ctx.fill();
     ctx.restore();
 }
 
-function hitScaleHandle(px, py, box) {
-    const size = 10;
-    const handles = [
-        [box.x, box.y],
-        [box.x + box.w, box.y],
-        [box.x, box.y + box.h],
-        [box.x + box.w, box.y + box.h]
-    ];
-    return handles.some(([hx, hy]) => {
-        return Math.abs(px - hx) <= size && Math.abs(py - hy) <= size;
-    });
+function hitScaleHandle(px,py,b){
+    const s=10;
+    return [[b.x,b.y],[b.x+b.w,b.y],[b.x,b.y+b.h],[b.x+b.w,b.y+b.h]]
+        .some(([hx,hy])=>Math.abs(px-hx)<=s && Math.abs(py-hy)<=s);
 }
 
-function hitRotateHandle(px, py, box) {
-    const rx = box.x + box.w / 2;
-    const ry = box.y - 20;
-    const r = 10;
-    const dx = px - rx;
-    const dy = py - ry;
-    return dx * dx + dy * dy <= r * r;
+function hitRotateHandle(px,py,b){
+    const rx=b.x+b.w/2, ry=b.y-20;
+    return (px-rx)**2 + (py-ry)**2 <= 100;
 }
 
-/* ============================================================
-   キャンバスクリック処理
-============================================================ */
-canvas.addEventListener("click", (e) => {
-    const { x, y } = getCanvasClickPosition(e);
+// ====================== クリック処理 ======================
+canvas.addEventListener("click", e => {
+    const {x,y}=getCanvasClickPosition(e);
 
-    // テキストツール時の新規入力開始
-    if (currentTool === "text") {
-        typing = true;
-        typingText = "";
-        typingX = x;
-        typingY = y;
-        selectedObject = null;
-        selectedType = null;
-        drawCanvas();
-        broadcastState();
-        return;
+    if (currentTool==="text") {
+        typing=true; typingText=""; typingX=x; typingY=y;
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); return;
     }
 
-    // 既存オブジェクトの選択（矢印・テキスト）
-    const hitArrow = hitTestArrow(x, y);
-    const hitText = texts.find(t => {
-        const box = getBoundingBox(t, "text");
-        return (
-            x >= box.x &&
-            x <= box.x + box.w &&
-            y >= box.y &&
-            y <= box.y + box.h
-        );
+    const hitArrow = hitTestArrow(x,y);
+    const hitText = texts.find(t=>{
+        const b=getBoundingBox(t,"text");
+        return x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h;
     });
 
-    if (hitArrow) {
-        selectedObject = hitArrow;
-        selectedType = "arrow";
-        drawCanvas();
-        return;
-    }
+    if (hitArrow){ selectedObject=hitArrow; selectedType="arrow"; drawCanvas(); return; }
+    if (hitText){ selectedObject=hitText; selectedType="text"; drawCanvas(); return; }
 
-    if (hitText) {
-        selectedObject = hitText;
-        selectedType = "text";
-        drawCanvas();
-        return;
-    }
-
-    // マーカー追加
-    if (currentTool === "marker") {
+    if (currentTool==="marker"){
         saveHistory();
         markers.push({
-            id: "marker_" + Date.now(),
-            x,
-            y,
-            name: document.getElementById("markerName").value,
-            color: currentMarkerColor,
-            opacity: currentMarkerOpacity,
-            size: currentMarkerSize
+            id:"marker_"+Date.now(), x,y,
+            name:document.getElementById("markerName").value,
+            color:currentMarkerColor, opacity:currentMarkerOpacity, size:currentMarkerSize
         });
-        selectedObject = null;
-        selectedType = null;
-        drawCanvas();
-        broadcastState();
-        updateCommentList();
-        return;
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); updateCommentList(); return;
     }
 
-    // 矢印追加
-    if (currentTool === "arrow") {
+    if (currentTool==="arrow"){
         saveHistory();
         arrows.push({
-            id: "arrow_" + Date.now(),
-            x,
-            y,
-            angle: 0,
-            scale: currentArrowScale,
-            color: currentArrowColor,
-            opacity: currentArrowOpacity
+            id:"arrow_"+Date.now(), x,y,
+            angle:0, scale:currentArrowScale,
+            color:currentArrowColor, opacity:currentArrowOpacity
         });
-        selectedObject = null;
-        selectedType = null;
-        drawCanvas();
-        broadcastState();
-        return;
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); return;
     }
 
-    // 何もヒットしなければ選択解除
-    selectedObject = null;
-    selectedType = null;
-    drawCanvas();
+    selectedObject=null; selectedType=null; drawCanvas();
 });
 
-/* ============================================================
-   マーカー／矢印ドラッグ
-============================================================ */
-let draggingMarker = null;
-let draggingArrow = null;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
+// ====================== ヒットテスト ======================
+let draggingMarker=null, draggingArrow=null, dragOffsetX=0, dragOffsetY=0;
 
-function hitTestMarker(x, y) {
-    return markers.find(m => {
-        const dx = x - m.x;
-        const dy = y - m.y;
-        return Math.sqrt(dx * dx + dy * dy) <= (m.size || 10);
-    }) || null;
+function hitTestMarker(x,y){
+    return markers.find(m=>{
+        const dx=x-m.x, dy=y-m.y;
+        return Math.sqrt(dx*dx+dy*dy)<= (m.size||10);
+    })||null;
 }
 
-function hitTestArrow(x, y) {
-    const rBase = 25;
-    return arrows.find(a => {
-        const r = rBase * (a.scale || 1);
-        const dx = x - a.x;
-        const dy = y - a.y;
-        return Math.abs(dx) <= r && Math.abs(dy) <= r;
-    }) || null;
+function hitTestArrow(x,y){
+    const rBase=25;
+    return arrows.find(a=>{
+        const r=rBase*(a.scale||1);
+        return Math.abs(x-a.x)<=r && Math.abs(y-a.y)<=r;
+    })||null;
 }
-
-/* ============================================================
-   ペン描画・ドラッグ・パン・変形
-============================================================ */
+// ====================== ペン・ドラッグ・パン・変形 ======================
 let drawing = false;
 
-canvas.addEventListener("mousedown", (e) => {
-    const { x, y } = getCanvasClickPosition(e);
+canvas.addEventListener("mousedown", e => {
+    const {x,y}=getCanvasClickPosition(e);
 
-    // 変形ハンドル優先（選択中オブジェクトがある場合）
+    // ハンドル操作時はツール解除（誤爆防止）
+    function clearTool() {
+        currentTool="none"; penMode=false; textAddMode=false;
+    }
+
     if (selectedObject && selectedType) {
-        const box = getBoundingBox(selectedObject, selectedType);
+        const b=getBoundingBox(selectedObject,selectedType);
 
-        if (hitScaleHandle(x, y, box)) {
-            transformMode = "scale";
-            transformStart = {
-                x,
-                y,
-                box,
-                originalScale: selectedType === "arrow" ? (selectedObject.scale || 1) : null,
-                originalSize: selectedType === "text" ? selectedObject.size : null
+        if (hitScaleHandle(x,y,b)) {
+            clearTool();
+            transformMode="scale";
+            transformStart={
+                x,y,box:b,
+                originalScale:selectedType==="arrow"?selectedObject.scale||1:null,
+                originalSize:selectedType==="text"?selectedObject.size:null
             };
-            saveHistory();
-            return;
+            saveHistory(); return;
         }
 
-        if (hitRotateHandle(x, y, box)) {
-            transformMode = "rotate";
-            transformStart = {
-                x,
-                y,
-                centerX: selectedType === "arrow" ? selectedObject.x : (box.x + box.w / 2),
-                centerY: selectedType === "arrow" ? selectedObject.y : (box.y + box.h / 2),
-                originalAngle: selectedObject.angle || 0
+        if (hitRotateHandle(x,y,b)) {
+            clearTool();
+            transformMode="rotate";
+            transformStart={
+                x,y,
+                centerX:selectedType==="arrow"?selectedObject.x:b.x+b.w/2,
+                centerY:selectedType==="arrow"?selectedObject.y:b.y+b.h/2,
+                originalAngle:selectedObject.angle||0
             };
-            saveHistory();
-            return;
+            saveHistory(); return;
         }
 
-        // 枠内クリック → move として扱う（矢印のみ既存ドラッグ流用）
-        if (selectedType === "arrow") {
-            if (
-                x >= box.x && x <= box.x + box.w &&
-                y >= box.y && y <= box.y + box.h
-            ) {
+        if (selectedType==="arrow") {
+            if (x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h) {
+                clearTool();
                 saveHistory();
-                draggingArrow = selectedObject;
-                dragOffsetX = x - draggingArrow.x;
-                dragOffsetY = y - draggingArrow.y;
+                draggingArrow=selectedObject;
+                dragOffsetX=x-draggingArrow.x;
+                dragOffsetY=y-draggingArrow.y;
                 return;
             }
         }
 
-        if (selectedType === "text") {
-            if (
-                x >= box.x && x <= box.x + box.w &&
-                y >= box.y && y <= box.y + box.h
-            ) {
-                // テキストの移動
-                transformMode = "move";
-                transformStart = {
-                    x,
-                    y,
-                    originalX: selectedObject.x,
-                    originalY: selectedObject.y
+        if (selectedType==="text") {
+            if (x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h) {
+                clearTool();
+                transformMode="move";
+                transformStart={
+                    x,y,
+                    originalX:selectedObject.x,
+                    originalY:selectedObject.y
                 };
-                saveHistory();
-                return;
+                saveHistory(); return;
             }
         }
     }
 
-    // マーカーのドラッグ
-    if (currentTool === "marker") {
-        const hit = hitTestMarker(x, y);
-        if (hit) {
-            saveHistory();
-            draggingMarker = hit;
-            dragOffsetX = x - hit.x;
-            dragOffsetY = y - hit.y;
-            return;
+    if (currentTool==="marker") {
+        const hit=hitTestMarker(x,y);
+        if (hit){ saveHistory(); draggingMarker=hit;
+            dragOffsetX=x-hit.x; dragOffsetY=y-hit.y; return; }
+    }
+
+    if (currentTool==="arrow") {
+        const hit=hitTestArrow(x,y);
+        if (hit){
+            saveHistory(); draggingArrow=hit;
+            dragOffsetX=x-hit.x; dragOffsetY=y-hit.y;
+            selectedObject=hit; selectedType="arrow"; return;
         }
     }
 
-    // 矢印のドラッグ（選択状態でなくても）
-    if (currentTool === "arrow") {
-        const hit = hitTestArrow(x, y);
-        if (hit) {
-            saveHistory();
-            draggingArrow = hit;
-            dragOffsetX = x - hit.x;
-            dragOffsetY = y - hit.y;
-            selectedObject = hit;
-            selectedType = "arrow";
-            return;
-        }
-    }
-
-    // ペン描画
-    if (currentTool === "pen") {
-        drawing = true;
-        saveHistory();
+    if (currentTool==="pen") {
+        drawing=true; saveHistory();
         penPaths.push({
-            points: [{ x, y }],
-            color: currentPenColor,
-            width: currentPenWidth,
-            opacity: currentPenOpacity
+            points:[{x,y}],
+            color:currentPenColor,
+            width:currentPenWidth,
+            opacity:currentPenOpacity
         });
         return;
     }
 
-    // パン
-    if (currentTool === "pan") {
-        isPanning = true;
-        panStartX = e.clientX - offsetX;
-        panStartY = e.clientY - offsetY;
+    if (currentTool==="pan") {
+        isPanning=true;
+        panStartX=e.clientX-offsetX;
+        panStartY=e.clientY-offsetY;
         return;
     }
 });
 
-canvas.addEventListener("mousemove", (e) => {
-    const { x, y } = getCanvasClickPosition(e);
+canvas.addEventListener("mousemove", e => {
+    const {x,y}=getCanvasClickPosition(e);
 
-    // 変形中
-    if (transformMode === "scale" && selectedObject && selectedType && transformStart) {
-        const dx = x - transformStart.x;
-        const dy = y - transformStart.y;
-        const delta = Math.max(dx, dy);
+    if (transformMode==="scale" && selectedObject && transformStart) {
+        const dx=x-transformStart.x, dy=y-transformStart.y;
+        const d=Math.max(dx,dy);
 
-        if (selectedType === "arrow") {
-            const base = transformStart.originalScale || 1;
-            selectedObject.scale = Math.max(0.2, base + delta / 100);
+        if (selectedType==="arrow") {
+            selectedObject.scale=Math.max(0.2,(transformStart.originalScale||1)+d/100);
         }
-
-        if (selectedType === "text") {
-            const base = transformStart.originalSize || selectedObject.size;
-            selectedObject.size = Math.max(8, base + delta / 2);
+        if (selectedType==="text") {
+            selectedObject.size=Math.max(8,(transformStart.originalSize||selectedObject.size)+d/2);
         }
-
-        drawCanvas();
-        return;
+        drawCanvas(); return;
     }
 
-    if (transformMode === "rotate" && selectedObject && selectedType && transformStart) {
-        const cx = transformStart.centerX;
-        const cy = transformStart.centerY;
-        const angle = Math.atan2(y - cy, x - cx);
-        selectedObject.angle = angle;
-        drawCanvas();
-        return;
+    if (transformMode==="rotate" && selectedObject && transformStart) {
+        const cx=transformStart.centerX, cy=transformStart.centerY;
+        selectedObject.angle=Math.atan2(y-cy,x-cx);
+        drawCanvas(); return;
     }
 
-    if (transformMode === "move" && selectedObject && selectedType === "text" && transformStart) {
-        const dx = x - transformStart.x;
-        const dy = y - transformStart.y;
-        selectedObject.x = transformStart.originalX + dx;
-        selectedObject.y = transformStart.originalY + dy;
-        drawCanvas();
-        return;
+    if (transformMode==="move" && selectedType==="text" && transformStart) {
+        selectedObject.x=transformStart.originalX+(x-transformStart.x);
+        selectedObject.y=transformStart.originalY+(y-transformStart.y);
+        drawCanvas(); return;
     }
 
-    // マーカー移動
     if (draggingMarker) {
-        draggingMarker.x = x - dragOffsetX;
-        draggingMarker.y = y - dragOffsetY;
-        drawCanvas();
-        return;
+        draggingMarker.x=x-dragOffsetX;
+        draggingMarker.y=y-dragOffsetY;
+        drawCanvas(); return;
     }
 
-    // 矢印移動
     if (draggingArrow) {
-        draggingArrow.x = x - dragOffsetX;
-        draggingArrow.y = y - dragOffsetY;
-        drawCanvas();
-        return;
+        draggingArrow.x=x-dragOffsetX;
+        draggingArrow.y=y-dragOffsetY;
+        drawCanvas(); return;
     }
 
-    // ペン描画
-    if (currentTool === "pen" && drawing) {
-        penPaths[penPaths.length - 1].points.push({ x, y });
-        drawCanvas();
-        return;
+    if (drawing && currentTool==="pen") {
+        penPaths[penPaths.length-1].points.push({x,y});
+        drawCanvas(); return;
     }
 
-    // パン
     if (isPanning) {
-        offsetX = e.clientX - panStartX;
-        offsetY = e.clientY - panStartY;
+        offsetX=e.clientX-panStartX;
+        offsetY=e.clientY-panStartY;
         drawCanvas();
     }
 });
 
 canvas.addEventListener("mouseup", () => {
-    let changed = false;
-
-    if (drawing) changed = true;
-    if (draggingMarker || draggingArrow) changed = true;
-    if (transformMode) changed = true;
-
-    drawing = false;
-    isPanning = false;
-    draggingMarker = null;
-    draggingArrow = null;
-    transformMode = null;
-    transformStart = null;
+    const changed = drawing || draggingMarker || draggingArrow || transformMode;
+    drawing=false; isPanning=false;
+    draggingMarker=null; draggingArrow=null;
+    transformMode=null; transformStart=null;
 
     if (changed) {
-        drawCanvas();
-        broadcastState();
-        updateCommentList();
+        drawCanvas(); broadcastState(); updateCommentList();
     }
 });
 
-/* ============================================================
-   ズーム
-============================================================ */
+// ====================== ズーム ======================
 document.getElementById("zoomInBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-    saveHistory();
-    zoom += zoomStep;
-    drawCanvas();
-    broadcastState();
+    cancelTyping(); selectedObject=null; selectedType=null;
+    saveHistory(); zoom+=zoomStep; drawCanvas(); broadcastState();
 };
-
 document.getElementById("zoomOutBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-    saveHistory();
-    zoom = Math.max(0.2, zoom - zoomStep);
-    drawCanvas();
-    broadcastState();
+    cancelTyping(); selectedObject=null; selectedType=null;
+    saveHistory(); zoom=Math.max(0.2,zoom-zoomStep); drawCanvas(); broadcastState();
 };
-
 document.getElementById("zoomResetBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-    saveHistory();
-    zoom = 1.0;
-    drawCanvas();
-    broadcastState();
+    cancelTyping(); selectedObject=null; selectedType=null;
+    saveHistory(); zoom=1.0; drawCanvas(); broadcastState();
 };
 
-/* ============================================================
-   PNG 書き出し
-============================================================ */
-document.getElementById("exportPngBtn")?.addEventListener("click", () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-    canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "battle-map.png";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+// ====================== PNG書き出し ======================
+document.getElementById("exportPngBtn")?.addEventListener("click",()=>{
+    cancelTyping(); selectedObject=null; selectedType=null;
+    canvas.toBlob(b=>{
+        if(!b)return;
+        const url=URL.createObjectURL(b);
+        const a=document.createElement("a");
+        a.href=url; a.download="battle-map.png";
+        document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
     });
 });
 
-/* ============================================================
-   描画処理
-============================================================ */
+// ====================== 描画処理 ======================
 function drawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.save();
+    ctx.translate(offsetX,offsetY);
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.scale(zoom,zoom);
+    ctx.translate(-canvas.width/2,-canvas.height/2);
 
-    ctx.translate(offsetX, offsetY);
+    if(backgroundImage) ctx.drawImage(backgroundImage,0,0);
 
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
-    if (backgroundImage) {
-        ctx.drawImage(backgroundImage, 0, 0);
-    }
-
-    /* ペン */
-    penPaths.forEach(path => {
+    penPaths.forEach(p=>{
         ctx.save();
-        ctx.strokeStyle = path.color;
-        ctx.lineWidth = path.width;
-        ctx.globalAlpha = path.opacity;
-        ctx.lineJoin = "round";
-        ctx.lineCap = "round";
-
+        ctx.strokeStyle=p.color; ctx.lineWidth=p.width;
+        ctx.globalAlpha=p.opacity; ctx.lineJoin="round"; ctx.lineCap="round";
         ctx.beginPath();
-        path.points.forEach((p, i) => {
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-        });
-        ctx.stroke();
+        p.points.forEach((pt,i)=> i?ctx.lineTo(pt.x,pt.y):ctx.moveTo(pt.x,pt.y));
+        ctx.stroke(); ctx.restore();
+    });
+
+    markers.forEach(m=>{
+        ctx.save(); ctx.globalAlpha=m.opacity;
+        ctx.beginPath(); ctx.arc(m.x,m.y,m.size||10,0,Math.PI*2);
+        ctx.fillStyle=m.color; ctx.fill();
+        ctx.fillStyle="#000";
+        ctx.font=`700 14px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillText(m.name,m.x+(m.size||10)+4,m.y+4);
         ctx.restore();
     });
 
-    /* マーカー */
-    markers.forEach(m => {
-        ctx.save();
-        ctx.globalAlpha = m.opacity;
-
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.size || 10, 0, Math.PI * 2);
-        ctx.fillStyle = m.color;
-        ctx.fill();
-
-        ctx.fillStyle = "#000";
-        ctx.font = `700 14px "Noto Sans JP", "Yu Gothic", sans-serif`;
-        ctx.fillText(m.name, m.x + (m.size || 10) + 4, m.y + 4);
-
-        ctx.restore();
-    });
-
-    /* 強調表示中のマーカー */
-    if (highlightedMarkerId) {
-        const m = markers.find(mm => mm.id === highlightedMarkerId);
-        if (m) {
-            ctx.save();
-            ctx.globalAlpha = 0.4;
+    if(highlightedMarkerId){
+        const m=markers.find(mm=>mm.id===highlightedMarkerId);
+        if(m){
+            ctx.save(); ctx.globalAlpha=0.4;
             ctx.beginPath();
-            ctx.arc(m.x, m.y, (m.size || 10) + 12, 0, Math.PI * 2);
-            ctx.fillStyle = m.color;
-            ctx.fill();
-            ctx.restore();
+            ctx.arc(m.x,m.y,(m.size||10)+12,0,Math.PI*2);
+            ctx.fillStyle=m.color; ctx.fill(); ctx.restore();
         }
     }
 
-    /* 矢印（↑デザイン） */
-    arrows.forEach(a => {
+    arrows.forEach(a=>{
         ctx.save();
-        ctx.translate(a.x, a.y);
-        ctx.rotate(a.angle || 0);
-        ctx.scale(a.scale || 1, a.scale || 1);
-        ctx.globalAlpha = a.opacity || currentArrowOpacity;
-
+        ctx.translate(a.x,a.y);
+        ctx.rotate(a.angle||0);
+        ctx.scale(a.scale||1,a.scale||1);
+        ctx.globalAlpha=a.opacity||currentArrowOpacity;
         ctx.beginPath();
-        ctx.moveTo(0, -25);
-        ctx.lineTo(10, 0);
-        ctx.lineTo(4, 0);
-        ctx.lineTo(4, 25);
-        ctx.lineTo(-4, 25);
-        ctx.lineTo(-4, 0);
-        ctx.lineTo(-10, 0);
+        ctx.moveTo(0,-25);
+        ctx.lineTo(10,0); ctx.lineTo(4,0);
+        ctx.lineTo(4,25); ctx.lineTo(-4,25);
+        ctx.lineTo(-4,0); ctx.lineTo(-10,0);
         ctx.closePath();
+        ctx.fillStyle=a.color||currentArrowColor;
+        ctx.fill(); ctx.restore();
+    });
 
-        ctx.fillStyle = a.color || currentArrowColor;
-        ctx.fill();
-
+    texts.forEach(t=>{
+        ctx.save();
+        ctx.translate(t.x,t.y);
+        if(t.angle) ctx.rotate(t.angle);
+        ctx.font=`700 ${t.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillStyle=t.color;
+        ctx.shadowColor="rgba(255,255,255,0.9)";
+        ctx.shadowBlur=12; ctx.shadowOffsetX=2; ctx.shadowOffsetY=2;
+        ctx.fillText(t.text,0,0);
         ctx.restore();
     });
 
-    /* テキスト（外側光彩＋ドロップシャドウ＋回転対応） */
-    texts.forEach(t => {
+    if(typing){
         ctx.save();
-
-        ctx.translate(t.x, t.y);
-        if (t.angle) ctx.rotate(t.angle);
-
-        ctx.font = `700 ${t.size}px "Noto Sans JP", "Yu Gothic", sans-serif`;
-        ctx.fillStyle = t.color;
-
-        ctx.shadowColor = "rgba(255,255,255,0.9)";
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
-        ctx.fillText(t.text, 0, 0);
-
-        ctx.restore();
-    });
-
-    /* 入力中テキスト（回転なし） */
-    if (typing) {
-        ctx.save();
-
-        ctx.font = `700 ${currentTextSize}px "Noto Sans JP", "Yu Gothic", sans-serif`;
-        ctx.fillStyle = currentTextColor;
-
-        ctx.shadowColor = "rgba(255,255,255,0.9)";
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-
-        ctx.fillText(typingText, typingX, typingY);
-
-        const width = ctx.measureText(typingText).width;
-        const cursorX = typingX + width + 2;
-
+        ctx.font=`700 ${currentTextSize}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillStyle=currentTextColor;
+        ctx.shadowColor="rgba(255,255,255,0.9)";
+        ctx.shadowBlur=12; ctx.shadowOffsetX=2; ctx.shadowOffsetY=2;
+        ctx.fillText(typingText,typingX,typingY);
+        const w=ctx.measureText(typingText).width;
+        const cx=typingX+w+2;
         ctx.beginPath();
-        ctx.moveTo(cursorX, typingY - currentTextSize);
-        ctx.lineTo(cursorX, typingY + 4);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = currentTextColor;
-        ctx.stroke();
-
-        ctx.restore();
+        ctx.moveTo(cx,typingY-currentTextSize);
+        ctx.lineTo(cx,typingY+4);
+        ctx.lineWidth=2; ctx.strokeStyle=currentTextColor;
+        ctx.stroke(); ctx.restore();
     }
 
-    // 選択中オブジェクトのハンドル描画
-    if (selectedObject && selectedType) {
-        drawTransformHandles(selectedObject, selectedType);
-    }
-   
+    if(selectedObject && selectedType) drawTransformHandles(selectedObject,selectedType);
     ctx.restore();
 }
 
-/* ============================================================
-   画像ドラッグ＆ドロップ
-============================================================ */
+// ====================== 画像ドロップ ======================
+window.addEventListener("dragover",e=>e.preventDefault(),false);
+window.addEventListener("drop",e=>e.preventDefault(),false);
+document.body.addEventListener("dragover",e=>e.preventDefault());
+document.body.addEventListener("drop",e=>e.preventDefault());
 
-/* ブラウザのデフォルト動作（画像を開く）を完全に無効化 */
-window.addEventListener("dragover", e => e.preventDefault(), false);
-window.addEventListener("drop", e => e.preventDefault(), false);
-document.body.addEventListener("dragover", e => e.preventDefault());
-document.body.addEventListener("drop", e => e.preventDefault());
-
-/* キャンバスへの画像ドロップ処理（元からある処理） */
-document.body.addEventListener("drop", (e) => {
+document.body.addEventListener("drop",e=>{
     e.preventDefault();
-
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
+    const file=e.dataTransfer.files[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+        const img=new Image();
+        img.onload=()=>{
             saveHistory();
-            canvas.width = img.width;
-            canvas.height = img.height;
-
-            backgroundImage = img;
-
-            document.getElementById("dropHint").style.display = "none";
-            drawCanvas();
-            broadcastState();
+            canvas.width=img.width;
+            canvas.height=img.height;
+            backgroundImage=img;
+            document.getElementById("dropHint").style.display="none";
+            drawCanvas(); broadcastState();
         };
-        img.src = reader.result;
+        img.src=reader.result;
     };
     reader.readAsDataURL(file);
 });
 
-
-/* ============================================================
-   ★ 右クリックメニュー
-============================================================ */
-canvas.addEventListener("contextmenu", (e) => {
+// ====================== 右クリックメニュー ======================
+canvas.addEventListener("contextmenu",e=>{
     e.preventDefault();
-
-    const { x, y } = getCanvasClickPosition(e);
-
-    const hitMarker = hitTestMarker(x, y);
-    const hitArrow = hitTestArrow(x, y);
-    const hitText = texts.find(t => {
-        const box = getBoundingBox(t, "text");
-        return (
-            x >= box.x &&
-            x <= box.x + box.w &&
-            y >= box.y &&
-            y <= box.y + box.h
-        );
+    const {x,y}=getCanvasClickPosition(e);
+    const hitMarker=hitTestMarker(x,y);
+    const hitArrow=hitTestArrow(x,y);
+    const hitText=texts.find(t=>{
+        const b=getBoundingBox(t,"text");
+        return x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h;
     });
 
     hideAllMenus();
 
-    if (hitMarker) {
-        window.selectedMarker = hitMarker;
-        showMenu("markerMenu", e.clientX, e.clientY);
-        return;
-    }
-
-    if (hitArrow) {
-        window.selectedArrow = hitArrow;
-        showMenu("arrowMenu", e.clientX, e.clientY);
-        return;
-    }
-
-    if (hitText) {
-        window.selectedText = hitText;
-        showMenu("textMenu", e.clientX, e.clientY);
-        return;
-    }
+    if(hitMarker){ window.selectedMarker=hitMarker;
+        showMenu("markerMenu",e.clientX,e.clientY); return; }
+    if(hitArrow){ window.selectedArrow=hitArrow;
+        showMenu("arrowMenu",e.clientX,e.clientY); return; }
+    if(hitText){ window.selectedText=hitText;
+        showMenu("textMenu",e.clientX,e.clientY); return; }
 });
 
-function hideAllMenus() {
+function hideAllMenus(){
     document.getElementById("markerMenu").classList.add("hidden");
     document.getElementById("arrowMenu").classList.add("hidden");
     document.getElementById("textMenu").classList.add("hidden");
 }
 
-function showMenu(id, x, y) {
-    const menu = document.getElementById(id);
-    menu.style.left = x + "px";
-    menu.style.top = y + "px";
-    menu.classList.remove("hidden");
+function showMenu(id,x,y){
+    const m=document.getElementById(id);
+    m.style.left=x+"px"; m.style.top=y+"px";
+    m.classList.remove("hidden");
 }
 
-/* ============================================================
-   メニューのボタン動作
-============================================================ */
-document.getElementById("deleteMarkerBtn").onclick = () => {
-    if (!window.selectedMarker) return;
+// ====================== メニュー操作 ======================
+document.getElementById("deleteMarkerBtn").onclick=()=>{
+    if(!window.selectedMarker)return;
     saveHistory();
-    markers = markers.filter(m => m !== window.selectedMarker);
+    markers=markers.filter(m=>m!==window.selectedMarker);
     delete markerComments[window.selectedMarker.id];
-    hideAllMenus();
-    drawCanvas();
-    updateCommentList();
-    broadcastState();
+    hideAllMenus(); drawCanvas(); updateCommentList(); broadcastState();
 };
 
-document.getElementById("arrowRotateLeftBtn").onclick = () => {
-    if (!window.selectedArrow) return;
+document.getElementById("arrowRotateLeftBtn").onclick=()=>{
+    if(!window.selectedArrow)return;
     saveHistory();
-    window.selectedArrow.angle = (window.selectedArrow.angle || 0) - Math.PI / 8;
-    hideAllMenus();
-    drawCanvas();
-    broadcastState();
+    window.selectedArrow.angle=(window.selectedArrow.angle||0)-Math.PI/8;
+    hideAllMenus(); drawCanvas(); broadcastState();
 };
 
-document.getElementById("arrowRotateRightBtn").onclick = () => {
-    if (!window.selectedArrow) return;
+document.getElementById("arrowRotateRightBtn").onclick=()=>{
+    if(!window.selectedArrow)return;
     saveHistory();
-    window.selectedArrow.angle = (window.selectedArrow.angle || 0) + Math.PI / 8;
-    hideAllMenus();
-    drawCanvas();
-    broadcastState();
+    window.selectedArrow.angle=(window.selectedArrow.angle||0)+Math.PI/8;
+    hideAllMenus(); drawCanvas(); broadcastState();
 };
 
-document.getElementById("arrowDeleteBtn").onclick = () => {
-    if (!window.selectedArrow) return;
+document.getElementById("arrowDeleteBtn").onclick=()=>{
+    if(!window.selectedArrow)return;
     saveHistory();
-    arrows = arrows.filter(a => a !== window.selectedArrow);
-    hideAllMenus();
-    drawCanvas();
-    broadcastState();
+    arrows=arrows.filter(a=>a!==window.selectedArrow);
+    hideAllMenus(); drawCanvas(); broadcastState();
 };
 
-document.getElementById("deleteTextBtn").onclick = () => {
-    if (!window.selectedText) return;
+document.getElementById("deleteTextBtn").onclick=()=>{
+    if(!window.selectedText)return;
     saveHistory();
-    texts = texts.filter(t => t !== window.selectedText);
-    hideAllMenus();
-    drawCanvas();
-    broadcastState();
+    texts=texts.filter(t=>t!==window.selectedText);
+    hideAllMenus(); drawCanvas(); broadcastState();
 };
 
-/* コメント追加 */
-document.getElementById("addCommentBtn").onclick = () => {
-    if (!window.selectedMarker) return;
-
-    const text = prompt("コメントを入力してください：");
-    if (!text) return;
-
-    const m = window.selectedMarker;
-
-    if (!markerComments[m.id]) markerComments[m.id] = [];
-    markerComments[m.id].push(text);
-
-    updateCommentList();
-    hideAllMenus();
+document.getElementById("addCommentBtn").onclick=()=>{
+    if(!window.selectedMarker)return;
+    const t=prompt("コメントを入力してください：");
+    if(!t)return;
+    const m=window.selectedMarker;
+    if(!markerComments[m.id]) markerComments[m.id]=[];
+    markerComments[m.id].push(t);
+    updateCommentList(); hideAllMenus();
 };
 
-/* コメント欄更新 */
-function updateCommentList() {
-    const list = document.getElementById("commentList");
-    if (!list) return;
+function updateCommentList(){
+    const list=document.getElementById("commentList");
+    if(!list)return;
+    list.innerHTML="";
+    markers.forEach(m=>{
+        const cs=markerComments[m.id];
+        if(!cs)return;
+        cs.forEach(c=>{
+            const div=document.createElement("div");
+            div.className="commentItem";
+            const name=document.createElement("span");
+            name.className="markerName";
+            name.textContent=m.name||"(無名)";
+            name.style.color=m.color;
+            const text=document.createElement("span");
+            text.textContent="："+c;
 
-    list.innerHTML = "";
+            name.onmouseenter=()=>{ highlightedMarkerId=m.id; drawCanvas(); };
+            name.onmouseleave=()=>{ highlightedMarkerId=null; drawCanvas(); };
 
-    markers.forEach(m => {
-        const comments = markerComments[m.id];
-        if (!comments) return;
-
-        comments.forEach(c => {
-            const div = document.createElement("div");
-            div.className = "commentItem";
-
-            const nameSpan = document.createElement("span");
-            nameSpan.className = "markerName";
-            nameSpan.textContent = m.name || "(無名)";
-            nameSpan.style.color = m.color;
-
-            const textSpan = document.createElement("span");
-            textSpan.textContent = "：" + c;
-
-            nameSpan.addEventListener("mouseenter", () => {
-                highlightedMarkerId = m.id;
-                drawCanvas();
-            });
-
-            nameSpan.addEventListener("mouseleave", () => {
-                highlightedMarkerId = null;
-                drawCanvas();
-            });
-
-            div.appendChild(nameSpan);
-            div.appendChild(textSpan);
+            div.appendChild(name); div.appendChild(text);
             list.appendChild(div);
         });
     });
 }
 
-/* ============================================================
-   メニュー閉じる
-============================================================ */
-document.addEventListener("click", () => {
-    hideAllMenus();
-});
+document.addEventListener("click",()=>hideAllMenus());
 
-/* ============================================================
-   初期状態
-============================================================ */
+// ====================== 初期描画 ======================
 updateUndoRedoButtons();
 drawCanvas();
 updateCommentList();
