@@ -10,16 +10,28 @@ body {
 }
 
 .top-bar {
-    width: 100%;
-    height: 48px;
-    background: #222;
+    height: 56px !important;
+    font-size: 20px !important;
+    padding: 0 20px;
+    background: #000;
     color: #fff;
     display: flex;
     align-items: center;
-    padding-left: 16px;
-    font-size: 18px;
+    justify-content: space-between; /* ★ 追加：左右に配置 */
     font-weight: 700;
 }
+
+.top-link {
+    color: #fff;
+    font-size: 16px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.top-link:hover {
+    text-decoration: underline;
+}
+
 
 /* ============================================================
    ツールバー（白）
