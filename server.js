@@ -63,10 +63,12 @@ app.get("/list", (req, res) => {
 
   const list = files.map(f => {
     const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
-    return {
-      id: data.id,
-      title: data.title
-    };
+return {
+    id: data.id,
+    title: data.title,
+    category: data.category || "未分類"
+};
+
   });
 
   res.json(list);
