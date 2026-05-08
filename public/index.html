@@ -7,7 +7,12 @@
 </head>
 <body>
 
-<h1>BDO Battle Map</h1>
+<!-- ★ 編集画面と統一したヘッダー -->
+<div class="top-bar">
+    BDO Battle Map - Image List
+</div>
+
+<div class="page-container">
 
 <button id="newCreateBtn" class="primary-btn">＋ 新規作成</button>
 
@@ -19,12 +24,16 @@
 
 <!-- ====================== プリセット画像管理 ====================== -->
 <div class="fold-header preset-header">
-    <span class="fold-icon">▼</span> プリセット画像管理
+    <div class="left">
+        <span class="fold-icon">▼</span> プリセット画像管理
+    </div>
     <button id="addPresetBtn" class="right-btn">＋追加</button>
     <input type="file" id="presetFileInput" accept="image/png" style="display:none;">
 </div>
 
 <div class="fold-content" id="presetList"></div>
+
+</div><!-- page-container -->
 
 <script src="index.js"></script>
 </body>
