@@ -768,8 +768,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
     if (json.success) {
         alert("保存しました！");
         location.href = "index.html";
-    }
-};else {
+    } else {
         alert("保存に失敗しました");
     }
 };
