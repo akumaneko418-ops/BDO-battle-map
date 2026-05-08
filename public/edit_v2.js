@@ -1,10 +1,30 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-   // 右パネルの fold-content をデフォルトで閉じる
-document.querySelectorAll(".fold-content").forEach(fc => {
-    fc.style.display = "none";
-});
+    // 右パネルの fold-content をデフォルトで閉じる
+    document.querySelectorAll(".fold-content").forEach(fc => {
+        fc.style.display = "none";
+    });
 
+    // fold-header をクリックしたら fold-content を開閉
+    document.querySelectorAll(".fold-header").forEach(header => {
+        header.addEventListener("click", () => {
+            const content = header.nextElementSibling;
+            if (!content) return;
+
+            // 開閉
+            if (content.style.display === "none") {
+                content.style.display = "block";
+            } else {
+                content.style.display = "none";
+            }
+
+            // ▼ / ▶ の切り替え
+            const icon = header.querySelector(".fold-icon");
+            if (icon) {
+                icon.textContent = (content.style.display === "none") ? "▶" : "▼";
+            }
+        });
+    
 /* ============================================================
    初期設定
 ============================================================ */
