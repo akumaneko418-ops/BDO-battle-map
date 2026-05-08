@@ -1,115 +1,40 @@
-// ===============================
-// 折りたたみ UI 初期化
-// ===============================
-function initFoldUI() {
-    document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "block");
-    document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>BDO Battle Map</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-    document.querySelectorAll(".fold-header").forEach(h => {
-        h.addEventListener("click", () => {
-            const content = h.nextElementSibling;
-            if (!content) return;
+<body>
 
-            const icon = h.querySelector(".fold-icon");
-            const isOpen = content.style.display !== "none";
+<div class="top-bar">
+    BDO Battle Map - Image List
+</div>
 
-            content.style.display = isOpen ? "none" : "block";
-            if (icon) icon.textContent = isOpen ? "▲" : "▼";
-        });
-    });
-}
+<div class="page-container">
 
-initFoldUI();
+    <button id="newCreateBtn" class="primary-btn">＋ 新規作成</button>
 
-// ===============================
-// 新規作成
-// ===============================
-document.getElementById("newCreateBtn").onclick = () => {
-    location.href = "edit.html";
-};
+    <div class="fold-header">
+        <span class="fold-icon">▼</span> 保存済み画像
+    </div>
+    <div class="fold-content" id="savedImages"></div>
 
-// ===============================
-// 保存済み画像一覧
-// ===============================
-async function loadSavedImages() {
-    const res = await fetch("/list");  // ← server.js と一致
-    const files = await res.json();
+    <div class="fold-header preset-header">
+        <div class="left">
+            <span class="fold-icon">▼</span> プリセット画像管理
+        </div>
+        <button id="addPresetBtn" class="right-btn">＋追加</button>
+        <input type="file" id="presetFileInput" accept="image/png" style="display:none;">
+    </div>
 
-    const container = document.getElementById("savedImages");
-    container.innerHTML = "";
+    <div class="fold-content" id="presetList"></div>
 
-    files.forEach(f => {
-        const row = document.createElement("div");
-        row.className = "item-row";
+</div>
 
-        row.innerHTML = `
-            <span>${f.title}</span>
-            <button onclick="location.href='edit.html?id=${f.id}'">編集</button>
-        `;
+<!-- JS は必ず最後に読み込む -->
+<script src="index.js"></script>
 
-        container.appendChild(row);
-    });
-}
-
-// ===============================
-// プリセット一覧
-// ===============================
-async function loadPresets() {
-    const res = await fetch("/listPresets");
-    const files = await res.json();
-
-    const container = document.getElementById("presetList");
-    container.innerHTML = "";
-
-    files.forEach(f => {
-        const row = document.createElement("div");
-        row.className = "item-row";
-
-        row.innerHTML = `
-            <span>${f}</span>
-            <button onclick="deletePreset('${f}')">削除</button>
-        `;
-
-        container.appendChild(row);
-    });
-}
-
-// ===============================
-// プリセット削除
-// ===============================
-async function deletePreset(name) {
-    await fetch("/deletePreset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
-    });
-    loadPresets();
-}
-
-// ===============================
-// プリセット追加
-// ===============================
-document.getElementById("addPresetBtn").onclick = () => {
-    document.getElementById("presetFileInput").click();
-};
-
-document.getElementById("presetFileInput").onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const form = new FormData();
-    form.append("preset", file);
-
-    await fetch("/uploadPreset", {
-        method: "POST",
-        body: form
-    });
-
-    loadPresets();
-};
-
-// ===============================
-// 初期ロード
-// ===============================
-loadSavedImages();
-loadPresets();
+</body>
+</html>
