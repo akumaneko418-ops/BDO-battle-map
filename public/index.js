@@ -64,23 +64,25 @@ async function loadSavedImages() {
     });
 
     // 削除ボタン
-    document.querySelectorAll(".delete-btn").forEach(btn => {
-        btn.onclick = async () => {
-            const id = btn.dataset.id;
-            if (!confirm("本当に削除しますか？")) return;
+async function deleteImage(id) {
+    if (!confirm("本当に削除しますか？")) return;
 
-            const res = await fetch(`/delete?id=${id}`, { method: "DELETE" });
-            const json = await res.json();
-
-            if (json.success) {
-                alert("削除しました");
-                loadSavedImages();
-            } else {
-                alert("削除に失敗しました");
-            }
-        };
+    const res = await fetch("/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
     });
+
+    const json = await res.json();
+
+    if (json.success) {
+        alert("削除しました");
+        loadSavedImages();
+    } else {
+        alert("削除に失敗しました: " + json.error);
+    }
 }
+
 
 // ===============================
 // プリセット一覧
