@@ -805,6 +805,8 @@ async function loadDataIfNeeded() {
         canvas.width = img.width;
         canvas.height = img.height;
         backgroundImage = img;
+        document.getElementById("dropHint").style.display = "none";
+
         drawCanvas();
     };
     img.src = data.image;
