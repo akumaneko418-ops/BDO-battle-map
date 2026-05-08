@@ -239,7 +239,7 @@ button:hover {
 }
 
 /* ============================================================
-   スライダー（右パネル専用コンパクト化）
+   スライダー（右パネル専用コンパクト化＋フォント縮小）
 ============================================================ */
 .right-panel input[type="range"] {
     width: 100%;
@@ -261,9 +261,11 @@ button:hover {
     background: #666;
 }
 
-/* ラベルとの間隔 */
-.right-panel .compact-row label {
-    margin-bottom: 1px !important;
+/* ラベルと数値のフォントを小さくしてスライダーに寄せる */
+.right-panel .compact-row label,
+.right-panel .compact-row span {
+    font-size: 11px !important;
+    margin-bottom: 0 !important;
 }
 
 /* 砦の名前と色の間隔 */
@@ -307,10 +309,6 @@ button:hover {
 .contextMenu div {
     padding: 8px 16px;
     cursor: pointer;
-}
-
-.contextMenu div:hover {
-    background: #eee;
 }
 
 .contextMenu div:hover {
