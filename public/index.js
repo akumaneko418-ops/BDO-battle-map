@@ -99,15 +99,14 @@ async function loadPresets() {
         row.innerHTML = `
             <span>${f}</span>
             <div>
-                <button onclick="location.href='edit.html?preset=${encodeURIComponent(f)}'">編集</button>
-                <button onclick="deletePreset('${f}')">削除</button>
+                <button class="edit-btn" onclick="location.href='edit.html?preset=${encodeURIComponent(f)}'">編集</button>
+                <button class="delete-btn" onclick="deletePreset('${f}')">削除</button>
             </div>
         `;
 
         container.appendChild(row);
     });
 }
-
 
 // ===============================
 // プリセット削除
