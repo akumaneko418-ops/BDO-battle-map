@@ -18,13 +18,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 content.style.display = "none";
             }
 
-            // ▼ / ▶ の切り替え
+            // ▼ / ▲ の切り替え（仕様に合わせて修正）
             const icon = header.querySelector(".fold-icon");
             if (icon) {
-                icon.textContent = (content.style.display === "none") ? "▲" : "▼";
+                icon.textContent = (content.style.display === "none") ? "▼" : "▲";
             }
         });
     });
+
+});
+
 
     /* ============================================================
        初期設定
