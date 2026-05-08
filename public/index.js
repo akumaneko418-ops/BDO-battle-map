@@ -24,7 +24,7 @@ initFoldUI();
 // ===============================
 // 新規作成
 // ===============================
-document.getElementById("newCreateBtn").onclick = () => {
+document.getElementById("newBtn").onclick = () => {
     location.href = "edit.html";
 };
 
