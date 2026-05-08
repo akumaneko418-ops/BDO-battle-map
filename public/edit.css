@@ -360,9 +360,9 @@ button:hover {
 }
 .fileNameArea {
     display: flex;
-    gap: 8px;
     align-items: center;
-    margin: 10px 0;
+    gap: 8px;
+    width: 100%;
 }
 
 .categorySelect {
@@ -372,11 +372,18 @@ button:hover {
     border: 1px solid #aaa;
     border-radius: 4px;
     background: #fff;
+
+    /* ★ 重要：カテゴリは必要な幅だけ取る */
+    flex: 0 0 auto;
 }
 
 .fileNameInput {
-    flex: 1;
     height: 36px;
     padding: 4px 8px;
     font-size: 14px;
+
+    /* ★ 重要：残り全部を取る */
+    flex: 1 1 auto;
+    min-width: 0; /* ★ flex 子要素の縮小バグ対策 */
 }
+
