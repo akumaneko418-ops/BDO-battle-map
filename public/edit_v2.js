@@ -492,17 +492,41 @@ canvas.addEventListener("mouseup", () => {
 
 // ====================== ズーム ======================
 document.getElementById("zoomInBtn").onclick = () => {
-    cancelTyping(); selectedObject=null; selectedType=null;
-    saveHistory(); zoom+=zoomStep; drawCanvas(); broadcastState();
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
+
+    // ★ saveHistory() を削除
+    zoom += zoomStep;
+
+    drawCanvas();
+    broadcastState();
 };
+
 document.getElementById("zoomOutBtn").onclick = () => {
-    cancelTyping(); selectedObject=null; selectedType=null;
-    saveHistory(); zoom=Math.max(0.2,zoom-zoomStep); drawCanvas(); broadcastState();
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
+
+    // ★ saveHistory() を削除
+    zoom = Math.max(0.2, zoom - zoomStep);
+
+    drawCanvas();
+    broadcastState();
 };
+
 document.getElementById("zoomResetBtn").onclick = () => {
-    cancelTyping(); selectedObject=null; selectedType=null;
-    saveHistory(); zoom=1.0; drawCanvas(); broadcastState();
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
+
+    // ★ saveHistory() を削除
+    zoom = 1.0;
+
+    drawCanvas();
+    broadcastState();
 };
+
 
 // ====================== PNG書き出し ======================
 document.getElementById("exportPngBtn").onclick = () => {
