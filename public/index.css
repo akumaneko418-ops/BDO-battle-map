@@ -1,6 +1,9 @@
-html, body {
+body {
     margin: 0;
     padding: 0;
+    font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
+    background: #f5f5f5;
+    overflow: hidden;
 }
 
 .top-bar {
