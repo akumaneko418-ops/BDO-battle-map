@@ -278,3 +278,8 @@ input[type="range"] {
     line-height: 32px;
     white-space: nowrap;
 }
+.left-group {
+    display: flex;
+    align-items: center;
+}
+
