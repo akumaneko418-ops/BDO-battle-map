@@ -508,13 +508,17 @@ document.getElementById("zoomResetBtn").onclick = () => {
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
 
-    const title = currentTitle || "battle-map";
+    const fileNameInput = document.getElementById("fileNameInput");
+    let title = fileNameInput.value.trim();
+
+    if (!title) title = "battle-map";
 
     const a = document.createElement("a");
     a.href = canvas.toDataURL("image/png");
     a.download = `${title}.png`;
     a.click();
 };
+
 
 // ====================== 描画処理 ======================
 function drawCanvas() {
