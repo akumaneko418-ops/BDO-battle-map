@@ -508,14 +508,14 @@ document.getElementById("zoomResetBtn").onclick = () => {
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
 
-    let title = prompt("ファイル名を入力してください：");
-    if (!title) title = "battle-map";
+    const title = currentTitle || "battle-map";
 
     const a = document.createElement("a");
     a.href = canvas.toDataURL("image/png");
     a.download = `${title}.png`;
     a.click();
 };
+
 // ====================== 描画処理 ======================
 function drawCanvas() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -738,11 +738,15 @@ function updateCommentList(){
 
 document.addEventListener("click",()=>hideAllMenus());
 // ====================== 保存処理（ここに追加） ======================
+let currentTitle = null;
+
 document.getElementById("saveAllBtn").onclick = async () => {
     cancelTyping();
 
     const title = prompt("保存名を入力してください：");
     if (!title) return;
+
+    currentTitle = title; // ← 保存名を記録（PNG出力と連動）
 
     const image = canvas.toDataURL("image/png");
 
@@ -764,7 +768,8 @@ document.getElementById("saveAllBtn").onclick = async () => {
     if (json.success) {
         alert("保存しました！");
         location.href = "index.html";
-    } else {
+    }
+};else {
         alert("保存に失敗しました");
     }
 };
