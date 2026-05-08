@@ -105,7 +105,6 @@ function clearToolSelection() {
     penMode = false;
     textAddMode = false;
 
-    // パレットの強調表示も解除
     document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
         .forEach(btn => btn.classList.remove("selected"));
 }
@@ -219,6 +218,7 @@ document.addEventListener("keydown", e => {
     if (e.key === "Backspace") { typingText = typingText.slice(0, -1); drawCanvas(); e.preventDefault(); return; }
     if (e.key.length === 1) { typingText += e.key; drawCanvas(); e.preventDefault(); }
 });
+
 // ====================== バウンディングボックス ======================
 function getBoundingBox(obj, type) {
     if (type === "arrow") {
@@ -305,7 +305,6 @@ canvas.addEventListener("click", e => {
 
     selectedObject=null; selectedType=null; drawCanvas();
 });
-
 // ====================== ヒットテスト ======================
 let draggingMarker=null, draggingArrow=null, dragOffsetX=0, dragOffsetY=0;
 
@@ -330,7 +329,6 @@ let drawing = false;
 canvas.addEventListener("mousedown", e => {
     const {x,y}=getCanvasClickPosition(e);
 
-    // ★ 修正：ハンドル操作開始時にツール解除（誤爆防止）
     const clearTool = () => clearToolSelection();
 
     if (selectedObject && selectedType) {
@@ -504,6 +502,7 @@ document.getElementById("zoomResetBtn").onclick = () => {
     cancelTyping(); selectedObject=null; selectedType=null;
     saveHistory(); zoom=1.0; drawCanvas(); broadcastState();
 };
+
 // ====================== PNG書き出し ======================
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
@@ -518,8 +517,6 @@ document.getElementById("exportPngBtn").onclick = () => {
     a.download = `${title}.png`;
     a.click();
 };
-
-
 // ====================== 描画処理 ======================
 function drawCanvas() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -748,7 +745,6 @@ let currentTitle = null;
 document.getElementById("saveAllBtn").onclick = async () => {
     cancelTyping();
 
-    // ← テキストボックスから名前を取る
     const fileNameInput = document.getElementById("fileNameInput");
     const title = fileNameInput.value.trim();
 
@@ -757,7 +753,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
         return;
     }
 
-    currentTitle = title; // PNG 出力と連動
+    currentTitle = title;
 
     const image = canvas.toDataURL("image/png");
 
@@ -784,8 +780,60 @@ document.getElementById("saveAllBtn").onclick = async () => {
     }
 };
 
+// ====================== ★ 保存データロード（id=◯◯） ======================
+async function loadDataIfNeeded() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    if (!id) return;
+
+    const res = await fetch(`/load?id=${id}`);
+    const data = await res.json();
+
+    document.getElementById("fileNameInput").value = data.title;
+    currentTitle = data.title;
+
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        backgroundImage = img;
+        drawCanvas();
+    };
+    img.src = data.image;
+
+    markers = data.markers || [];
+    markerComments = data.comments || {};
+
+    updateCommentList();
+    drawCanvas();
+}
+
+// ====================== ★ プリセットロード（preset=◯◯） ======================
+async function loadPresetIfNeeded() {
+    const params = new URLSearchParams(location.search);
+    const preset = params.get("preset");
+    if (!preset) return;
+
+    const res = await fetch(`/presetImage?name=${preset}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        backgroundImage = img;
+        drawCanvas();
+    };
+    img.src = url;
+
+    document.getElementById("fileNameInput").value = preset;
+    currentTitle = preset;
+}
+
 // ====================== 初期描画 ======================
 updateUndoRedoButtons();
 drawCanvas();
 updateCommentList();
-
+loadDataIfNeeded();
+loadPresetIfNeeded();
