@@ -340,3 +340,49 @@ button {
     height: 26px;
 }
 
+/* ============================================================
+   右パネルのコンパクト化（HTML と完全に噛み合う版）
+============================================================ */
+
+/* fold-content の内側余白を縮める */
+.fold-content {
+    padding: 4px 6px !important;
+}
+
+/* 各設定行の上下余白を縮める */
+.compact-row {
+    margin: 4px 0 !important;
+}
+
+/* ラベルとスライダーの間隔を縮める */
+.fold-content label {
+    margin-bottom: 2px !important;
+    display: inline-block;
+}
+
+/* スライダーの上下余白を縮める */
+input[type="range"] {
+    margin: 2px 0 !important;
+}
+
+/* 色ボタンを小さくする */
+.colorOption,
+.arrowColorOption,
+.textColorOption,
+.penColorOption {
+    width: 22px !important;
+    height: 22px !important;
+}
+
+/* ボタンをコンパクトに */
+button {
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+    height: 26px !important;
+}
+
+/* fold-header の高さを縮める */
+.fold-header {
+    padding: 4px 6px !important;
+    font-size: 13px !important;
+}
