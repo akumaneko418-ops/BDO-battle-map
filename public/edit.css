@@ -327,3 +327,35 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"] {
     margin: 1px 0 !important;
 }
+/* 「全て保存」ボタンのテキスト位置を中央に修正 */
+.saveButton {
+    padding: 0 16px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+/* スライダーとテキストの間隔をさらに詰める */
+.compact-row label {
+    margin-bottom: 1px !important;
+}
+
+input[type="range"] {
+    margin: 1px 0 !important;
+}
+
+/* 「全て保存」ボタンのテキスト位置を中央に修正 */
+.saveButton {
+    padding: 0 16px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* PNG出力・全て保存を右揃えにする */
+#exportPngBtn {
+    margin-left: auto !important;
+}
