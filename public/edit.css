@@ -319,3 +319,8 @@ input[type="range"] {
     padding: 6px 8px;
     margin-bottom: 4px;
 }
+.fold-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+}
