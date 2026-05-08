@@ -265,4 +265,5 @@ input[type="range"] {
     height: 32px;
     padding: 0 10px;
     line-height: 32px;
+    white-space: nowrap;
 }
