@@ -511,7 +511,7 @@ document.getElementById("exportPngBtn")?.addEventListener("click",()=>{
         if(!b)return;
         const url=URL.createObjectURL(b);
         const a=document.createElement("a");
-        a.href=url; a.download="battle-map.png";
+        a.href=url; a.download=`${title}.png`;
         document.body.appendChild(a); a.click(); a.remove();
         URL.revokeObjectURL(url);
     });
