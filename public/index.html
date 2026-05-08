@@ -1,90 +1,31 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>BDO Battle Map</title>
-  <style>
-    .controls {
-  margin-top: 20px;
-  position: relative;
-  z-index: 10;
-}
-
-#tooltip {
-  position: absolute;
-  background: #fff;
-  border: 1px solid #ccc;
-  padding: 5px;
-  display: none;
-  font-size: 12px;
-  max-width: 220px;
-  z-index: 9999; /* ← canvas より上に表示 */
-  pointer-events: none;
-}
-
-    #tooltip {
-      position: absolute;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 5px;
-      display: none;
-      font-size: 12px;
-      max-width: 220px;
-      z-index: 1000;
-      pointer-events: none;
-    }
-
-    .deleteBtn {
-      color: red;
-      cursor: pointer;
-      margin-left: 5px;
-      font-size: 10px;
-      pointer-events: auto;
-    }
-
-    .colorPicker {
-      margin: 10px 0;
-    }
-
-    .colorOption {
-      width: 20px;
-      height: 20px;
-      display: inline-block;
-      border-radius: 50%;
-      margin-right: 10px;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-
-    .selectedColor {
-      border: 2px solid black;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>BDO Battle Map - Image List</title>
+<link rel="stylesheet" href="index.css">
 </head>
 <body>
 
-  <canvas id="mapCanvas" width="1200" height="800"></canvas>
+<h1>BDO Battle Map</h1>
 
-  <div class="colorPicker">
-    <div class="markerNameInput">
-  <span>マーカー名：</span>
-  <input id="markerName" placeholder="例: A / B / 攻撃 / 防衛">
+<button id="newCreateBtn" class="primary-btn">＋ 新規作成</button>
+
+<!-- ====================== 保存済み画像 ====================== -->
+<div class="fold-header">
+    <span class="fold-icon">▼</span> 保存済み画像
 </div>
-    <span>マーカー色：</span>
-    <div id="pink" class="colorOption" style="background:#ff7eb9"></div>
-    <div id="blue" class="colorOption" style="background:#7ed6ff"></div>
-    <div id="yellow" class="colorOption" style="background:#fff47e"></div>
-  </div>
+<div class="fold-content" id="savedImages"></div>
 
-  <div>
-    <input id="nickname" placeholder="ニックネーム">
-    <input id="message" placeholder="コメント">
-    <button id="sendBtn">送信</button>
-  </div>
+<!-- ====================== プリセット画像管理 ====================== -->
+<div class="fold-header preset-header">
+    <span class="fold-icon">▼</span> プリセット画像管理
+    <button id="addPresetBtn" class="right-btn">＋追加</button>
+    <input type="file" id="presetFileInput" accept="image/png" style="display:none;">
+</div>
 
-  <div id="tooltip"></div>
+<div class="fold-content" id="presetList"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="script.js"></script>
+<script src="index.js"></script>
 </body>
 </html>
