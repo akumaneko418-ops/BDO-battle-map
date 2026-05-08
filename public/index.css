@@ -1,11 +1,12 @@
 .top-bar {
     height: 56px !important;
     font-size: 20px !important;
-    padding-left: 20px;
+    padding: 0 20px;
     background: #000;
     color: #fff;
     display: flex;
     align-items: center;
+    justify-content: space-between; /* 左右に配置 */
     font-weight: 700;
 }
 
