@@ -101,6 +101,7 @@ function updateUndoRedoButtons() {
 
 // ====================== ツール解除（グローバル） ======================
 function clearToolSelection() {
+    if (currentTool === "pen") return; // ★ ペンは解除しない
     currentTool = "none";
     penMode = false;
     textAddMode = false;
