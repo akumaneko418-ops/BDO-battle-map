@@ -14,7 +14,7 @@ body {
     color: #fff;
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* ★ 右リンクが無いので左寄せ */
+    justify-content: space-between; /* ★ 追加：左右に配置 */
     font-weight: 700;
 }
 
