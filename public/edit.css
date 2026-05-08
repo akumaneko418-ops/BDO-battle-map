@@ -358,3 +358,25 @@ button:hover {
 .tool-btn:hover {
     opacity: 0.9;
 }
+.fileNameArea {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.categorySelect {
+    height: 36px;
+    padding: 4px 8px;
+    font-size: 14px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.fileNameInput {
+    flex: 1;
+    height: 36px;
+    padding: 4px 8px;
+    font-size: 14px;
+}
