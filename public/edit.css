@@ -319,3 +319,11 @@ input[type="range"]::-moz-range-thumb {
     background: #666;
     cursor: pointer;
 }
+/* スライダーとテキストの間隔をさらに詰める */
+.compact-row label {
+    margin-bottom: 1px !important;
+}
+
+input[type="range"] {
+    margin: 1px 0 !important;
+}
