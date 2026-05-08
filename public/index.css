@@ -1,0 +1,68 @@
+body {
+    font-family: "Noto Sans JP", sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+.primary-btn {
+    padding: 8px 16px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.fold-header {
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 6px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
+
+.fold-icon {
+    margin-right: 6px;
+}
+
+.preset-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.right-btn {
+    padding: 4px 10px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.fold-content {
+    padding: 10px 20px;
+}
+
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.item-row button {
+    padding: 4px 8px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
