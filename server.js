@@ -1,11 +1,12 @@
 // ===============================
-// server.js（保存・読み込み・一覧・DL 完全版）
+// server.js（保存・読み込み・一覧・DL・プリセット管理 完全版）
 // ===============================
 
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
+const multer = require("multer");
 
 const app = express();
 const http = require("http").createServer(app);
@@ -14,9 +15,14 @@ const io = require("socket.io")(http);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.static("public"));
 
-// 保存先フォルダ
+// ===============================
+// データ保存フォルダ
+// ===============================
 const DATA_DIR = path.join(__dirname, "data");
+const PRESET_DIR = path.join(DATA_DIR, "presets");
+
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+if (!fs.existsSync(PRESET_DIR)) fs.mkdirSync(PRESET_DIR);
 
 // ===============================
 // 画像保存
@@ -49,7 +55,7 @@ app.post("/save", (req, res) => {
 });
 
 // ===============================
-// 一覧取得（タイトルだけ）
+// 保存済み画像一覧（タイトルだけ）
 // ===============================
 app.get("/list", (req, res) => {
   const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
@@ -107,6 +113,43 @@ app.get("/download/:id", (req, res) => {
   const filename = `${data.title}.png`;
 
   res.download(pngPath, filename);
+});
+
+// ===============================
+// ★ プリセット画像一覧
+// ===============================
+app.get("/listPresets", (req, res) => {
+  const files = fs.readdirSync(PRESET_DIR).filter(f => f.endsWith(".png"));
+  res.json(files);
+});
+
+// ===============================
+// ★ プリセット画像アップロード
+// ===============================
+const upload = multer({ dest: PRESET_DIR });
+
+app.post("/uploadPreset", upload.single("preset"), (req, res) => {
+  if (!req.file) return res.status(400).send("No file");
+
+  const ext = path.extname(req.file.originalname);
+  const newPath = req.file.path + ext;
+
+  fs.renameSync(req.file.path, newPath);
+
+  res.send("OK");
+});
+
+// ===============================
+// ★ プリセット画像削除
+// ===============================
+app.post("/deletePreset", (req, res) => {
+  const name = req.body.name;
+  if (!name) return res.status(400).send("No name");
+
+  const filePath = path.join(PRESET_DIR, name);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+  res.send("OK");
 });
 
 // ===============================
@@ -176,6 +219,3 @@ const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
-
-
-
