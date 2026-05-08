@@ -114,6 +114,21 @@ app.get("/download/:id", (req, res) => {
 
   res.download(pngPath, filename);
 });
+// ===============================
+// 保存済み画像削除
+// ===============================
+app.post("/delete", (req, res) => {
+  const id = req.body.id;
+  if (!id) return res.status(400).json({ error: "id が必要です" });
+
+  const jsonPath = path.join(DATA_DIR, `${id}.json`);
+  const pngPath = path.join(DATA_DIR, `${id}.png`);
+
+  if (fs.existsSync(jsonPath)) fs.unlinkSync(jsonPath);
+  if (fs.existsSync(pngPath)) fs.unlinkSync(pngPath);
+
+  res.json({ success: true });
+});
 
 // ===============================
 // ★ プリセット画像一覧
@@ -150,6 +165,19 @@ app.post("/deletePreset", (req, res) => {
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
   res.send("OK");
+});
+
+// ===============================
+// ★ プリセット画像取得
+// ===============================
+app.get("/presetImage", (req, res) => {
+  const name = req.query.name;
+  if (!name) return res.status(400).send("No name");
+
+  const filePath = path.join(PRESET_DIR, name);
+  if (!fs.existsSync(filePath)) return res.status(404).send("Not found");
+
+  res.sendFile(filePath);
 });
 
 // ===============================
