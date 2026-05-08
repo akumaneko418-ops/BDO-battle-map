@@ -326,3 +326,9 @@ button:hover {
 .contextMenu div:hover {
     background: #eee;
 }
+/* ヘッダーの表示範囲を少し大きくする */
+.top-bar {
+    height: 56px !important;
+    font-size: 20px !important;
+    padding-left: 20px; /* 少しだけ余裕を持たせる */
+}
