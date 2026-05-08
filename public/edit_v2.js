@@ -1,5 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+   // 右パネルの fold-content をデフォルトで閉じる
+document.querySelectorAll(".fold-content").forEach(fc => {
+    fc.style.display = "none";
+});
+
 /* ============================================================
    初期設定
 ============================================================ */
