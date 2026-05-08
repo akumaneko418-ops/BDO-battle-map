@@ -52,28 +52,28 @@ body {
     margin-left: auto !important;
 }
 
-/* 全て保存ボタンの中央揃え */
-.saveButton {
-    background: #007bff;
-    color: #fff;
-    font-size: 14px;
-    height: 34px !important;
-    line-height: 34px !important;
-    padding: 0 16px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ツールバー内のボタンを中央揃え */
+/* ツールバー内のボタンを中央揃え（下寄り補正込み） */
 .canvas-toolbar button {
     height: 34px !important;
-    line-height: 34px !important;
+    padding: 0 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 12px !important;
+    line-height: 1 !important;
+    transform: translateY(-1px); /* 下に寄るのを視覚的に1px持ち上げる */
     font-size: 14px;
+}
+
+/* 全て保存ボタンのスタイル */
+.saveButton {
+    background: #007bff;
+    color: #fff;
+}
+
+/* ズームボタンのフォント補正（＋ と －） */
+#zoomInBtn,
+#zoomOutBtn {
+    font-size: 18px !important;
 }
 
 /* ============================================================
@@ -239,12 +239,31 @@ button:hover {
 }
 
 /* ============================================================
-   スライダー（右パネル専用コンパクト化＋フォント縮小）
+   スライダー（右パネル専用コンパクト化＋間隔詰め）
 ============================================================ */
+.right-panel .compact-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 !important;
+}
+
+.right-panel .compact-row label {
+    font-size: 11px !important;
+    margin: 0 !important;
+    width: 52px;
+}
+
+.right-panel .compact-row span {
+    font-size: 11px !important;
+    margin-left: 4px !important;
+}
+
 .right-panel input[type="range"] {
     width: 100%;
     height: 4px !important;
-    margin: 1px 0 !important;
+    margin: 0 !important;
+    flex: 1;
 }
 
 .right-panel input[type="range"]::-webkit-slider-thumb {
@@ -259,13 +278,6 @@ button:hover {
     height: 10px !important;
     border-radius: 50%;
     background: #666;
-}
-
-/* ラベルと数値のフォントを小さくしてスライダーに寄せる */
-.right-panel .compact-row label,
-.right-panel .compact-row span {
-    font-size: 11px !important;
-    margin-bottom: 0 !important;
 }
 
 /* 砦の名前と色の間隔 */
