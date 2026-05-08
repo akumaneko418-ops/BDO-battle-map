@@ -124,6 +124,7 @@ socket.on("edit_state", (state) => {
 
 /* Undo / Redo ボタン */
 document.getElementById("undoBtn").onclick = () => {
+    cancelTyping();
     if (history.length === 0) return;
     const current = JSON.stringify(getCurrentState());
     redoHistory.push(current);
@@ -135,6 +136,7 @@ document.getElementById("undoBtn").onclick = () => {
 };
 
 document.getElementById("redoBtn").onclick = () => {
+    cancelTyping();
     if (redoHistory.length === 0) return;
     const current = JSON.stringify(getCurrentState());
     history.push(current);
@@ -175,6 +177,7 @@ let textAddMode = false;
 
 /* ペンのクリア */
 document.getElementById("penClearBtn").onclick = () => {
+    cancelTyping();
     saveHistory();
     penPaths = [];
     drawCanvas();
@@ -196,6 +199,7 @@ function activateColor(el, selector) {
 /* 砦マーカー色 */
 document.querySelectorAll(".colorOption").forEach((el) => {
     el.addEventListener("click", () => {
+        cancelTyping();
         currentMarkerColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".colorOption");
         currentTool = "marker";
@@ -207,6 +211,7 @@ document.querySelectorAll(".colorOption").forEach((el) => {
 /* 矢印色 */
 document.querySelectorAll(".arrowColorOption").forEach((el) => {
     el.addEventListener("click", () => {
+        cancelTyping();
         currentArrowColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".arrowColorOption");
         currentTool = "arrow";
@@ -218,6 +223,7 @@ document.querySelectorAll(".arrowColorOption").forEach((el) => {
 /* テキスト色 */
 document.querySelectorAll(".textColorOption").forEach((el) => {
     el.addEventListener("click", () => {
+        cancelTyping();
         currentTextColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".textColorOption");
         currentTool = "text";
@@ -229,6 +235,7 @@ document.querySelectorAll(".textColorOption").forEach((el) => {
 /* ペン色 */
 document.querySelectorAll(".penColorOption").forEach((el) => {
     el.addEventListener("click", () => {
+        cancelTyping();
         currentPenColor = getComputedStyle(el).backgroundColor;
         activateColor(el, ".penColorOption");
         currentTool = "pen";
@@ -296,6 +303,14 @@ let typing = false;
 let typingText = "";
 let typingX = 0;
 let typingY = 0;
+
+function cancelTyping() {
+    if (typing) {
+        typing = false;
+        typingText = "";
+        drawCanvas();
+    }
+}
 
 document.addEventListener("keydown", (e) => {
     if (!typing) return;
@@ -523,6 +538,7 @@ canvas.addEventListener("mouseup", () => {
    ズーム
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
+    cancelTyping();
     saveHistory();
     zoom += zoomStep;
     drawCanvas();
@@ -530,6 +546,7 @@ document.getElementById("zoomInBtn").onclick = () => {
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
+    cancelTyping();
     saveHistory();
     zoom = Math.max(0.2, zoom - zoomStep);
     drawCanvas();
@@ -537,6 +554,7 @@ document.getElementById("zoomOutBtn").onclick = () => {
 };
 
 document.getElementById("zoomResetBtn").onclick = () => {
+    cancelTyping();
     saveHistory();
     zoom = 1.0;
     drawCanvas();
@@ -547,6 +565,7 @@ document.getElementById("zoomResetBtn").onclick = () => {
    PNG 書き出し
 ============================================================ */
 document.getElementById("exportPngBtn")?.addEventListener("click", () => {
+    cancelTyping();
     canvas.toBlob((blob) => {
         if (!blob) return;
         const url = URL.createObjectURL(blob);
@@ -627,7 +646,7 @@ function drawCanvas() {
         }
     }
 
-        /* 矢印（↑デザイン） */
+    /* 矢印（↑デザイン） */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -697,6 +716,7 @@ function drawCanvas() {
    
     ctx.restore();
 }
+
 /* ============================================================
    画像ドラッグ＆ドロップ
 ============================================================ */
