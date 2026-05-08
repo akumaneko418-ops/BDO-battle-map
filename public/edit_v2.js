@@ -146,43 +146,7 @@ document.getElementById("penClearBtn").onclick = () => {
     drawCanvas();
     broadcastState();
 };
-
-/* ツール切替 */
-document.getElementById("markerModeBtn").onclick = () => {
-    currentTool = "marker";
-    penMode = false;
-    textAddMode = false;
-};
-
-document.getElementById("arrowModeBtn").onclick = () => {
-    currentTool = "arrow";
-    penMode = false;
-    textAddMode = false;
-};
-
-document.getElementById("penModeBtn").onclick = () => {
-    if (currentTool === "pen") {
-        currentTool = "none";
-        penMode = false;
-    } else {
-        currentTool = "pen";
-        penMode = true;
-        textAddMode = false;
-    }
-};
-
-document.getElementById("addTextModeBtn").onclick = () => {
-    currentTool = "text";
-    textAddMode = true;
-    penMode = false;
-};
-
-document.getElementById("panModeBtn").onclick = () => {
-    currentTool = "pan";
-    penMode = false;
-    textAddMode = false;
-};
-
+   
 /* ============================================================
    カラーピッカー（最新選択を優先）
 ============================================================ */
