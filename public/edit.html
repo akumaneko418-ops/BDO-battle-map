@@ -19,8 +19,20 @@
 <div class="canvas-toolbar">
 
     <!-- ファイル名入力欄 -->
-    <input class="fileNameInput" type="text" id="fileNameInput"
-           placeholder="ファイル名（例：拠点戦_〇〇）">
+<div class="fileNameArea">
+    <select id="categorySelect" class="categorySelect">
+        <option value="バレノス">バレノス</option>
+        <option value="セレンディア">セレンディア</option>
+        <option value="カルフェオン">カルフェオン</option>
+        <option value="メディア">メディア</option>
+        <option value="バレンシア">バレンシア</option>
+        <option value="カーマスリビア">カーマスリビア</option>
+        <option value="ウルキタ">ウルキタ</option>
+    </select>
+
+    <input id="fileNameInput" class="fileNameInput" placeholder="ファイル名（例：拠点戦_〇〇）">
+</div>
+
 
     <!-- 戻る・進む -->
     <button id="undoBtn">ひとつ戻る</button>
