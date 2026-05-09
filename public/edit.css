@@ -386,4 +386,16 @@ button:hover {
     flex: 1 1 auto;
     min-width: 0; /* ★ flex 子要素の縮小バグ対策 */
 }
+/* ============================
+   戻る / 進む ボタンの縦書きバグ修正
+   ============================ */
+#undoBtn,
+#redoBtn {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
