@@ -51,11 +51,14 @@ async function deleteImage(id) {
 }
 
 // ===============================
-// 保存済み画像一覧（カテゴリ折りたたみ対応）
+// 保存済み画像一覧（新しい順 + カテゴリ折りたたみ）
 // ===============================
 async function loadSavedImages() {
     const res = await fetch("/list");
-    const files = await res.json();
+    let files = await res.json();
+
+    // ★ 新しい順にソート（savedAt が大きい＝新しい）
+    files.sort((a, b) => b.savedAt - a.savedAt);
 
     const container = document.getElementById("savedList");
     container.innerHTML = "";
