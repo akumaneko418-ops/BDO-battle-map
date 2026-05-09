@@ -51,13 +51,12 @@ async function deleteImage(id) {
 }
 
 // ===============================
-// 保存済み画像一覧（カテゴリフィルタ対応）
+// 保存済み画像一覧（カテゴリ折りたたみ対応）
 // ===============================
 async function loadSavedImages() {
     const res = await fetch("/list");
     const files = await res.json();
 
-    const category = document.getElementById("categoryFilter").value;
     const container = document.getElementById("savedList");
     container.innerHTML = "";
 
@@ -69,11 +68,17 @@ async function loadSavedImages() {
     });
 
     Object.keys(groups).forEach(cat => {
-        if (category !== "all" && category !== cat) return;
+        // ▼ カテゴリ見出し（プリセットと同じデザイン）
+        const header = document.createElement("div");
+        header.className = "fold-header";
+        header.innerHTML = `
+            <div class="left">
+                <span class="fold-icon">▼</span> ${cat}
+            </div>
+        `;
 
         const section = document.createElement("div");
-        section.className = "categorySection";
-        section.innerHTML = `<h3>${cat}</h3>`;
+        section.className = "fold-content";
 
         groups[cat].forEach(f => {
             const row = document.createElement("div");
@@ -90,12 +95,18 @@ async function loadSavedImages() {
             section.appendChild(row);
         });
 
+        // 折りたたみ動作
+        header.onclick = () => {
+            const icon = header.querySelector(".fold-icon");
+            const isOpen = section.style.display !== "none";
+            section.style.display = isOpen ? "none" : "block";
+            icon.textContent = isOpen ? "▲" : "▼";
+        };
+
+        container.appendChild(header);
         container.appendChild(section);
     });
 }
-
-// カテゴリ変更時に再読み込み
-document.getElementById("categoryFilter").onchange = loadSavedImages;
 
 // ===============================
 // プリセット一覧
