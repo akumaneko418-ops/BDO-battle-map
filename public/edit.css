@@ -17,7 +17,7 @@ body {
     color: #fff;
     display: flex;
     align-items: center;
-    justify-content: space-between; /* ★ 追加：左右に配置 */
+    justify-content: space-between;
     font-weight: 700;
 }
 
@@ -31,7 +31,6 @@ body {
 .top-link:hover {
     text-decoration: underline;
 }
-
 
 /* ============================================================
    ツールバー（白）
@@ -48,23 +47,40 @@ body {
     box-sizing: border-box;
 }
 
-/* ファイル名入力欄（48px内に収まる最大サイズ） */
-.fileNameInput {
-    flex: 0 0 40% !important;
-    max-width: 40% !important;
-    height: 30px !important;
-    line-height: 30px !important;
-    font-size: 18px;
-    padding: 0 8px;
-    display: block;
+/* ★ 修正：fileNameArea が横幅を取りすぎて undo/redo を潰していた */
+.fileNameArea {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    /* width:100% を削除 */
+    flex: 0 0 auto; /* 必要な分だけ幅を取る */
 }
 
-/* PNG出力・全て保存を右揃え */
+.categorySelect {
+    height: 36px;
+    padding: 4px 8px;
+    font-size: 14px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+.fileNameInput {
+    height: 36px;
+    padding: 4px 8px;
+    font-size: 14px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* PNG出力・保存ボタンを右寄せ */
 #exportPngBtn {
     margin-left: auto !important;
 }
 
-/* ツールバー内のボタンを中央揃え（下寄り補正込み） */
+/* ツールバー内のボタン */
 .canvas-toolbar button {
     height: 34px !important;
     padding: 0 12px !important;
@@ -72,20 +88,36 @@ body {
     align-items: center !important;
     justify-content: center !important;
     line-height: 1 !important;
-    transform: translateY(-1px); /* 下に寄るのを視覚的に1px持ち上げる */
+    transform: translateY(-1px);
     font-size: 14px;
 }
 
-/* 全て保存ボタンのスタイル */
+/* 全て保存ボタン */
 .saveButton {
     background: #007bff;
     color: #fff;
 }
 
-/* ズームボタンのフォント補正（＋ と －） */
+/* ズームボタン */
 #zoomInBtn,
 #zoomOutBtn {
     font-size: 18px !important;
+}
+
+/* ============================================================
+   戻る / 進む ボタンの縦書きバグ修正（必須）
+============================================================ */
+#undoBtn,
+#redoBtn {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    /* ★ 追加：潰れ防止 */
+    min-width: 48px;
 }
 
 /* ============================================================
@@ -251,7 +283,7 @@ button:hover {
 }
 
 /* ============================================================
-   スライダー（右パネル専用コンパクト化＋間隔詰め）
+   スライダー
 ============================================================ */
 .right-panel .compact-row {
     display: flex;
@@ -292,7 +324,6 @@ button:hover {
     background: #666;
 }
 
-/* 砦の名前と色の間隔 */
 .markerNameWrapper {
     margin-bottom: 10px !important;
 }
@@ -338,64 +369,3 @@ button:hover {
 .contextMenu div:hover {
     background: #eee;
 }
-/* ヘッダーの表示範囲を少し大きくする */
-.top-bar {
-    height: 56px !important;
-    font-size: 26px !important;
-    padding-left: 20px; /* 少しだけ余裕を持たせる */
-}
-.tool-btn {
-    width: 100%;
-    padding: 6px 8px;
-    margin-bottom: 8px;
-    background: #ff9f43;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-}
-.tool-btn:hover {
-    opacity: 0.9;
-}
-.fileNameArea {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-
-.categorySelect {
-    height: 36px;
-    padding: 4px 8px;
-    font-size: 14px;
-    border: 1px solid #aaa;
-    border-radius: 4px;
-    background: #fff;
-
-    /* ★ 重要：カテゴリは必要な幅だけ取る */
-    flex: 0 0 auto;
-}
-
-.fileNameInput {
-    height: 36px;
-    padding: 4px 8px;
-    font-size: 14px;
-
-    /* ★ 重要：残り全部を取る */
-    flex: 1 1 auto;
-    min-width: 0; /* ★ flex 子要素の縮小バグ対策 */
-}
-/* ============================
-   戻る / 進む ボタンの縦書きバグ修正
-   ============================ */
-#undoBtn,
-#redoBtn {
-    writing-mode: horizontal-tb !important;
-    transform: none !important;
-    white-space: nowrap;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
