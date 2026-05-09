@@ -175,10 +175,20 @@
     </div>
 </div>
 
-<!-- ★ 新仕様：右クリックメニュー（砦マーカー用） -->
-<div id="contextMenu" class="context-menu" style="display:none;">
-    <div id="renameMarkerBtn">名前を変更</div>
-    <div id="deleteMarkerBtn">削除</div>
+<!-- ★ 右クリックメニュー（旧仕様フル復元版） -->
+<div id="markerMenu" class="context-menu hidden">
+    <div id="addCommentBtn">コメントを追加</div>
+    <div id="deleteMarkerBtn">砦マーカーを削除</div>
+</div>
+
+<div id="arrowMenu" class="context-menu hidden">
+    <div id="arrowRotateLeftBtn">左回転</div>
+    <div id="arrowRotateRightBtn">右回転</div>
+    <div id="arrowDeleteBtn">矢印を削除</div>
+</div>
+
+<div id="textMenu" class="context-menu hidden">
+    <div id="deleteTextBtn">テキストを削除</div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
