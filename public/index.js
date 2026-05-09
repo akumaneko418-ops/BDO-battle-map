@@ -14,7 +14,7 @@ function initFoldUI() {
             const isOpen = content.style.display !== "none";
 
             content.style.display = isOpen ? "none" : "block";
-            if (icon) icon.textContent = isOpen ? "▲" : "▼";
+            icon.textContent = isOpen ? "▲" : "▼";
         });
     });
 }
@@ -57,7 +57,7 @@ async function loadSavedImages() {
     const res = await fetch("/list");
     let files = await res.json();
 
-    // ★ 新しい順にソート（savedAt が大きい＝新しい）
+    // ★ 新しい順にソート
     files.sort((a, b) => b.savedAt - a.savedAt);
 
     const container = document.getElementById("savedList");
@@ -71,7 +71,6 @@ async function loadSavedImages() {
     });
 
     Object.keys(groups).forEach(cat => {
-        // ▼ カテゴリ見出し（プリセットと同じデザイン）
         const header = document.createElement("div");
         header.className = "fold-header";
         header.innerHTML = `
@@ -98,7 +97,6 @@ async function loadSavedImages() {
             section.appendChild(row);
         });
 
-        // 折りたたみ動作
         header.onclick = () => {
             const icon = header.querySelector(".fold-icon");
             const isOpen = section.style.display !== "none";
@@ -176,4 +174,3 @@ document.getElementById("presetFileInput").onchange = async e => {
 // ===============================
 loadSavedImages();
 loadPresets();
-
