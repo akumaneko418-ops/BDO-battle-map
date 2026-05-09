@@ -1,4 +1,6 @@
-// ====================== Fold UI ======================
+/* ============================================================
+   Fold UI
+============================================================ */
 function initFoldUI() {
     document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "none");
     document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
@@ -14,14 +16,15 @@ function initFoldUI() {
     });
 }
 
-// ====================== 初期設定 ======================
+/* ============================================================
+   初期設定
+============================================================ */
 const socket = io();
 let zoom = 1.0, zoomStep = 0.1;
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
 let backgroundImage = null;
 
-// ★ パン（右ドラッグ）用
 let offsetX = 0, offsetY = 0;
 let isPanning = false;
 let panStartX = 0, panStartY = 0;
@@ -34,17 +37,18 @@ let transformMode = null, transformStart = null;
 
 initFoldUI();
 
-// ====================== Undo / Redo ======================
+/* ============================================================
+   Undo / Redo
+============================================================ */
 let history = [], redoHistory = [];
 
-// ★ ズーム・パンは同期しないように除外
 function getCurrentState() {
     return {
         markers: structuredClone(markers),
         arrows: structuredClone(arrows),
         texts: structuredClone(texts),
         penPaths: structuredClone(penPaths),
-        backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
+        backgroundImageSrc: backgroundImage ? canvas.toDataURL() : null,
         markerComments: structuredClone(markerComments)
     };
 }
@@ -74,7 +78,6 @@ function saveHistory() {
     updateUndoRedoButtons();
 }
 
-// ★ リアルタイム同期用に軽くスロットル
 let lastBroadcastTime = 0;
 function broadcastState() {
     socket.emit("edit_state", getCurrentState());
@@ -111,18 +114,9 @@ function updateUndoRedoButtons() {
     document.getElementById("redoBtn").classList.toggle("disabled", !redoHistory.length);
 }
 
-// ====================== ツール解除 ======================
-function clearToolSelection() {
-    if (currentTool === "pen") return;
-    currentTool = "none";
-    penMode = false;
-    textAddMode = false;
-
-    document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
-        .forEach(btn => btn.classList.remove("selected"));
-}
-
-// ====================== ツール設定 ======================
+/* ============================================================
+   ツール設定
+============================================================ */
 let currentTool = "none";
 let currentMarkerColor = "#ff7eb9", currentMarkerOpacity = 1.0, currentMarkerSize = 10;
 let currentArrowColor = "#ff7eb9", currentArrowOpacity = 1.0, currentArrowScale = 1.0;
@@ -176,7 +170,9 @@ document.querySelectorAll(".penColorOption").forEach(el => {
     };
 });
 
-// ====================== スライダー ======================
+/* ============================================================
+   スライダー
+============================================================ */
 document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
 document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
 
@@ -198,7 +194,9 @@ document.getElementById("penOpacitySlider").oninput = e => {
 document.getElementById("textSizeSlider").oninput = e => currentTextSize = +e.target.value;
 document.getElementById("penWidthSlider").oninput = e => currentPenWidth = +e.target.value;
 
-// ====================== 座標変換 ======================
+/* ============================================================
+   座標変換
+============================================================ */
 function getCanvasClickPosition(e) {
     const rect = canvas.getBoundingClientRect();
     const rawX = e.clientX - rect.left - offsetX;
@@ -213,7 +211,9 @@ function getCanvasClickPosition(e) {
     };
 }
 
-// ====================== テキスト入力 ======================
+/* ============================================================
+   テキスト入力
+============================================================ */
 let typing = false, typingText = "", typingX = 0, typingY = 0;
 
 function cancelTyping() {
@@ -272,7 +272,9 @@ document.addEventListener("keydown", e => {
     }
 });
 
-// ====================== バウンディングボックス ======================
+/* ============================================================
+   バウンディングボックス
+============================================================ */
 function getBoundingBox(obj, type) {
     if (type === "arrow") {
         const s = 25 * (obj.scale || 1);
@@ -285,6 +287,11 @@ function getBoundingBox(obj, type) {
         const w = ctx.measureText(obj.text).width;
         ctx.restore();
         return { x: obj.x, y: obj.y - obj.size, w, h: obj.size };
+    }
+
+    if (type === "marker") {
+        const r = obj.size || 10;
+        return { x: obj.x - r, y: obj.y - r, w: r * 2, h: r * 2 };
     }
 
     return { x: 0, y: 0, w: 0, h: 0 };
@@ -314,19 +321,9 @@ function drawTransformHandles(obj, type) {
     ctx.restore();
 }
 
-function hitScaleHandle(px, py, b) {
-    const s = 10;
-    return [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]]
-        .some(([hx, hy]) => Math.abs(px - hx) <= s && Math.abs(py - hy) <= s);
-}
-
-function hitRotateHandle(px, py, b) {
-    const rx = b.x + b.w / 2;
-    const ry = b.y - 20;
-    return (px - rx) ** 2 + (py - ry) ** 2 <= 100;
-}
-
-// ====================== クリック処理 ======================
+/* ============================================================
+   クリック処理
+============================================================ */
 canvas.addEventListener("click", e => {
     const { x, y } = getCanvasClickPosition(e);
 
@@ -347,6 +344,7 @@ canvas.addEventListener("click", e => {
         const b = getBoundingBox(t, "text");
         return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
     });
+    const hitMarker = hitTestMarker(x, y);
 
     if (hitArrow) {
         selectedObject = hitArrow;
@@ -358,6 +356,13 @@ canvas.addEventListener("click", e => {
     if (hitText) {
         selectedObject = hitText;
         selectedType = "text";
+        drawCanvas();
+        return;
+    }
+
+    if (hitMarker) {
+        selectedObject = hitMarker;
+        selectedType = "marker";
         drawCanvas();
         return;
     }
@@ -402,7 +407,9 @@ canvas.addEventListener("click", e => {
     drawCanvas();
 });
 
-// ====================== ヒットテスト ======================
+/* ============================================================
+   ヒットテスト
+============================================================ */
 let draggingMarker = null, draggingArrow = null;
 let dragOffsetX = 0, dragOffsetY = 0;
 
@@ -422,13 +429,14 @@ function hitTestArrow(x, y) {
     }) || null;
 }
 
-// ====================== ペン・ドラッグ・パン・変形 ======================
+/* ============================================================
+   ペン・ドラッグ・パン・変形
+============================================================ */
 let drawing = false;
 
 canvas.addEventListener("mousedown", e => {
     const { x, y } = getCanvasClickPosition(e);
 
-    // ★ 右クリックでパン開始
     if (e.button === 2) {
         isPanning = true;
         panStartX = e.clientX - offsetX;
@@ -447,7 +455,8 @@ canvas.addEventListener("mousedown", e => {
             transformStart = {
                 x, y, box: b,
                 originalScale: selectedType === "arrow" ? selectedObject.scale || 1 : null,
-                originalSize: selectedType === "text" ? selectedObject.size : null
+                originalSize: selectedType === "text" ? selectedObject.size : null,
+                originalMarkerSize: selectedType === "marker" ? selectedObject.size : null
             };
             saveHistory();
             return;
@@ -458,8 +467,8 @@ canvas.addEventListener("mousedown", e => {
             transformMode = "rotate";
             transformStart = {
                 x, y,
-                centerX: selectedType === "arrow" ? selectedObject.x : b.x + b.w / 2,
-                centerY: selectedType === "arrow" ? selectedObject.y : b.y + b.h / 2,
+                centerX: selectedObject.x,
+                centerY: selectedObject.y,
                 originalAngle: selectedObject.angle || 0
             };
             saveHistory();
@@ -490,6 +499,17 @@ canvas.addEventListener("mousedown", e => {
                 return;
             }
         }
+
+        if (selectedType === "marker") {
+            if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+                clearTool();
+                saveHistory();
+                draggingMarker = selectedObject;
+                dragOffsetX = x - draggingMarker.x;
+                dragOffsetY = y - draggingMarker.y;
+                return;
+            }
+        }
     }
 
     if (currentTool === "marker") {
@@ -505,6 +525,8 @@ canvas.addEventListener("mousedown", e => {
     }
 
     if (currentTool === "arrow") {
+        const hit = hitTest
+            if (currentTool === "arrow") {
         const hit = hitTestArrow(x, y);
         if (hit) {
             clearTool();
@@ -528,11 +550,10 @@ canvas.addEventListener("mousedown", e => {
             width: currentPenWidth,
             opacity: currentPenOpacity
         });
-        broadcastState(); // 開始時点も共有
+        broadcastState();
         return;
     }
 });
-
 canvas.addEventListener("mousemove", e => {
     const { x, y } = getCanvasClickPosition(e);
 
@@ -547,6 +568,10 @@ canvas.addEventListener("mousemove", e => {
         if (selectedType === "text") {
             selectedObject.size = Math.max(8, (transformStart.originalSize || selectedObject.size) + d / 2);
         }
+        if (selectedType === "marker") {
+            selectedObject.size = Math.max(5, (transformStart.originalMarkerSize || selectedObject.size) + d / 4);
+        }
+
         drawCanvas();
         broadcastStateThrottled();
         return;
@@ -592,7 +617,107 @@ canvas.addEventListener("mousemove", e => {
         return;
     }
 
-    // ★ 右ドラッグパン（これは自分だけの表示なので同期しない）
+    if (isPanning) {
+        offsetX = e.clientX - panStartX;
+        offsetY = e.clientY - panStartY;
+        drawCanvas();
+    }
+});
+    if (currentTool === "arrow") {
+        const hit = hitTestArrow(x, y);
+        if (hit) {
+            clearTool();
+            saveHistory();
+            draggingArrow = hit;
+            dragOffsetX = x - hit.x;
+            dragOffsetY = y - hit.y;
+            selectedObject = hit;
+            selectedType = "arrow";
+            return;
+        }
+    }
+
+    if (currentTool === "pen") {
+        clearTool();
+        drawing = true;
+        saveHistory();
+        penPaths.push({
+            points: [{ x, y }],
+            color: currentPenColor,
+            width: currentPenWidth,
+            opacity: currentPenOpacity
+        });
+        broadcastState();
+        return;
+    }
+});
+
+/* ============================================================
+   mousemove（変形・ドラッグ・パン）
+============================================================ */
+canvas.addEventListener("mousemove", e => {
+    const { x, y } = getCanvasClickPosition(e);
+
+    if (transformMode === "scale" && selectedObject && transformStart) {
+        const dx = x - transformStart.x;
+        const dy = y - transformStart.y;
+        const d = Math.max(dx, dy);
+
+        if (selectedType === "arrow") {
+            selectedObject.scale = Math.max(0.2, (transformStart.originalScale || 1) + d / 100);
+        }
+        if (selectedType === "text") {
+            selectedObject.size = Math.max(8, (transformStart.originalSize || selectedObject.size) + d / 2);
+        }
+        if (selectedType === "marker") {
+            selectedObject.size = Math.max(5, (transformStart.originalMarkerSize || selectedObject.size) + d / 4);
+        }
+
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (transformMode === "rotate" && selectedObject && transformStart) {
+        const cx = transformStart.centerX;
+        const cy = transformStart.centerY;
+        selectedObject.angle = Math.atan2(y - cy, x - cx);
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (transformMode === "move" && selectedType === "text" && transformStart) {
+        selectedObject.x = transformStart.originalX + (x - transformStart.x);
+        selectedObject.y = transformStart.originalY + (y - transformStart.y);
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (draggingMarker) {
+        draggingMarker.x = x - dragOffsetX;
+        draggingMarker.y = y - dragOffsetY;
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (draggingArrow) {
+        draggingArrow.x = x - dragOffsetX;
+        draggingArrow.y = y - dragOffsetY;
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (drawing) {
+        penPaths[penPaths.length - 1].points.push({ x, y });
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
     if (isPanning) {
         offsetX = e.clientX - panStartX;
         offsetY = e.clientY - panStartY;
@@ -600,6 +725,9 @@ canvas.addEventListener("mousemove", e => {
     }
 });
 
+/* ============================================================
+   mouseup
+============================================================ */
 canvas.addEventListener("mouseup", () => {
     const changed = drawing || draggingMarker || draggingArrow || transformMode;
 
@@ -609,7 +737,6 @@ canvas.addEventListener("mouseup", () => {
     transformMode = null;
     transformStart = null;
 
-    // ★ 右ドラッグパン終了
     isPanning = false;
 
     if (changed) {
@@ -619,16 +746,16 @@ canvas.addEventListener("mouseup", () => {
     }
 });
 
-// ====================== ズーム ======================
+/* ============================================================
+   ズーム
+============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
     cancelTyping();
     selectedObject = null;
     selectedType = null;
 
     zoom += zoomStep;
-
     drawCanvas();
-    // ズームは同期しない
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
@@ -637,7 +764,6 @@ document.getElementById("zoomOutBtn").onclick = () => {
     selectedType = null;
 
     zoom = Math.max(0.2, zoom - zoomStep);
-
     drawCanvas();
 };
 
@@ -647,17 +773,17 @@ document.getElementById("zoomResetBtn").onclick = () => {
     selectedType = null;
 
     zoom = 1.0;
-
     drawCanvas();
 };
 
-// ====================== PNG書き出し ======================
+/* ============================================================
+   PNG書き出し
+============================================================ */
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
 
     const fileNameInput = document.getElementById("fileNameInput");
     let title = fileNameInput.value.trim();
-
     if (!title) title = "battle-map";
 
     const a = document.createElement("a");
@@ -665,13 +791,13 @@ document.getElementById("exportPngBtn").onclick = () => {
     a.download = `${title}.png`;
     a.click();
 };
-
-// ====================== 描画処理 ======================
+/* ============================================================
+   描画処理
+============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
 
-    // ★ パン（右ドラッグ）とズーム
     ctx.translate(offsetX, offsetY);
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
@@ -679,7 +805,6 @@ function drawCanvas() {
 
     if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0);
 
-    // ペン
     penPaths.forEach(p => {
         ctx.save();
         ctx.strokeStyle = p.color;
@@ -693,7 +818,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    // マーカー
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -708,7 +832,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    // マーカー強調
     if (highlightedMarkerId) {
         const m = markers.find(mm => mm.id === highlightedMarkerId);
         if (m) {
@@ -722,7 +845,6 @@ function drawCanvas() {
         }
     }
 
-    // 矢印
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -745,7 +867,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    // テキスト
     texts.forEach(t => {
         ctx.save();
         ctx.translate(t.x, t.y);
@@ -763,7 +884,6 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    // 入力中テキスト
     if (typing) {
         ctx.save();
         ctx.font = `700 ${currentTextSize}px "Noto Sans JP","Yu Gothic",sans-serif`;
@@ -789,13 +909,14 @@ function drawCanvas() {
         ctx.restore();
     }
 
-    // 選択中オブジェクトの変形ハンドル
     if (selectedObject && selectedType) drawTransformHandles(selectedObject, selectedType);
 
     ctx.restore();
 }
 
-// ====================== ドロップ ======================
+/* ============================================================
+   ドロップ処理
+============================================================ */
 window.addEventListener("dragover", e => e.preventDefault(), false);
 window.addEventListener("drop", e => e.preventDefault(), false);
 document.body.addEventListener("dragover", e => e.preventDefault());
@@ -823,7 +944,9 @@ document.body.addEventListener("drop", e => {
     reader.readAsDataURL(file);
 });
 
-// ====================== 右クリックメニュー ======================
+/* ============================================================
+   右クリックメニュー
+============================================================ */
 canvas.addEventListener("contextmenu", e => {
     e.preventDefault();
     const { x, y } = getCanvasClickPosition(e);
@@ -867,7 +990,9 @@ function showMenu(id, x, y) {
     m.classList.remove("hidden");
 }
 
-// ====================== メニュー操作 ======================
+/* ============================================================
+   メニュー操作
+============================================================ */
 document.getElementById("deleteMarkerBtn").onclick = () => {
     if (!window.selectedMarker) return;
     saveHistory();
@@ -967,8 +1092,9 @@ function updateCommentList() {
 }
 
 document.addEventListener("click", () => hideAllMenus());
-
-// ====================== 保存処理 ======================
+/* ============================================================
+   保存処理
+============================================================ */
 let currentTitle = null;
 
 document.getElementById("saveAllBtn").onclick = async () => {
@@ -990,7 +1116,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
         body: JSON.stringify({
             title: currentTitle,
             category: document.getElementById("categorySelect").value,
-            image: canvas.toDataURL(),
+            image: canvas.toDataURL(),   // ← blob ではなく dataURL を保存
             markers,
             comments: markerComments
         })
@@ -1006,7 +1132,9 @@ document.getElementById("saveAllBtn").onclick = async () => {
     }
 };
 
-// ====================== 保存データロード ======================
+/* ============================================================
+   保存データロード
+============================================================ */
 async function loadDataIfNeeded() {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
@@ -1026,7 +1154,7 @@ async function loadDataIfNeeded() {
         document.getElementById("dropHint").style.display = "none";
         drawCanvas();
     };
-    img.src = data.image;
+    img.src = data.image;  // ← dataURL なので blob エラーが出ない
 
     markers = data.markers || [];
     markerComments = data.comments || {};
@@ -1035,7 +1163,9 @@ async function loadDataIfNeeded() {
     drawCanvas();
 }
 
-// ====================== プリセットロード ======================
+/* ============================================================
+   プリセットロード
+============================================================ */
 async function loadPresetIfNeeded() {
     const params = new URLSearchParams(location.search);
     const preset = params.get("preset");
@@ -1059,7 +1189,9 @@ async function loadPresetIfNeeded() {
     currentTitle = preset;
 }
 
-// ====================== 初期描画 ======================
+/* ============================================================
+   初期描画
+============================================================ */
 updateUndoRedoButtons();
 drawCanvas();
 updateCommentList();
