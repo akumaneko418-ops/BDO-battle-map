@@ -31,7 +31,7 @@
         <input id="fileNameInput" class="fileNameInput" placeholder="MAPの名前">
     </div>
 
-    <!-- ★ 右側：ボタン群をまとめて独立させる -->
+    <!-- 右側：ボタン群 -->
     <div class="toolbar-buttons">
         <button id="undoBtn">戻る</button>
         <button id="redoBtn">進む</button>
@@ -175,20 +175,10 @@
     </div>
 </div>
 
-<!-- 右クリックメニュー -->
-<div id="markerMenu" class="contextMenu hidden">
-    <div id="addCommentBtn">コメント追加</div>
+<!-- ★ 新仕様：右クリックメニュー（砦マーカー用） -->
+<div id="contextMenu" class="context-menu" style="display:none;">
+    <div id="renameMarkerBtn">名前を変更</div>
     <div id="deleteMarkerBtn">削除</div>
-</div>
-
-<div id="arrowMenu" class="contextMenu hidden">
-    <div id="arrowRotateLeftBtn">左回転</div>
-    <div id="arrowRotateRightBtn">右回転</div>
-    <div id="arrowDeleteBtn">削除</div>
-</div>
-
-<div id="textMenu" class="contextMenu hidden">
-    <div id="deleteTextBtn">削除</div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
