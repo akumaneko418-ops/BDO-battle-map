@@ -152,7 +152,7 @@ body {
 }
 .edit-btn,
 .editPresetBtn {
-    background: #007bff;
+    background: #4da3ff;;
     color: white;
     border: none;
     padding: 6px 12px;
@@ -164,4 +164,33 @@ body {
 .edit-btn:hover,
 .editPresetBtn:hover {
     background: #0066d6;
+}
+.new-create-btn {
+    padding: 10px 18px;
+    background: #4da3ff; /* ＋追加と同じ色 */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.new-create-btn:hover {
+    background: #3b8fe0;
+}
+.categorySectionHeader {
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 10px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+}
+
+.categorySectionHeader .fold-icon {
+    margin-right: 6px;
 }
