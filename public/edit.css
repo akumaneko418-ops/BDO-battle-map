@@ -52,9 +52,15 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto; /* ← 必要な幅だけ取る */
+}
 
-    /* width:100% を削除 */
-    flex: 0 0 auto; /* 必要な分だけ幅を取る */
+/* ★ 新規追加：右側ボタン群を flex で独立させる */
+.toolbar-buttons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto; /* ← 潰れない */
 }
 
 .categorySelect {
