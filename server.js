@@ -43,6 +43,22 @@ app.post("/save", (req, res) => {
     return res.status(400).json({ error: "title と image は必須です" });
   }
 
+  // ★ 既存タイトル一覧を取得
+  const existingTitles = fs.readdirSync(DATA_DIR)
+    .filter(f => f.endsWith(".json"))
+    .map(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
+      return d.title;
+    });
+
+  // ★ 重複タイトル処理
+  let finalTitle = title;
+  let counter = 2;
+  while (existingTitles.includes(finalTitle)) {
+    finalTitle = `${title}(${counter})`;
+    counter++;
+  }
+
   const id = uuidv4();
   const base = path.join(DATA_DIR, id);
 
@@ -53,7 +69,7 @@ app.post("/save", (req, res) => {
   // JSON 保存
   const json = {
     id,
-    title,
+    title: finalTitle,   // ← ★重複処理後のタイトル
     category,
     markers,
     comments,
