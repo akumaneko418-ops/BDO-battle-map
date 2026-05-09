@@ -1,5 +1,5 @@
 // ===============================
-// server.js（完全版）
+// server.js（完全版・リアルタイム同期対応）
 // ===============================
 
 const express = require("express");
@@ -43,7 +43,6 @@ app.post("/save", (req, res) => {
     return res.status(400).json({ error: "title と image は必須です" });
   }
 
-  // ★ 既存タイトル一覧を取得
   const existingTitles = fs.readdirSync(DATA_DIR)
     .filter(f => f.endsWith(".json"))
     .map(f => {
@@ -51,7 +50,6 @@ app.post("/save", (req, res) => {
       return d.title;
     });
 
-  // ★ 重複タイトル処理
   let finalTitle = title;
   let counter = 2;
   while (existingTitles.includes(finalTitle)) {
@@ -62,14 +60,12 @@ app.post("/save", (req, res) => {
   const id = uuidv4();
   const base = path.join(DATA_DIR, id);
 
-  // PNG 保存
   const pngData = image.replace(/^data:image\/png;base64,/, "");
   fs.writeFileSync(`${base}.png`, pngData, "base64");
 
-  // JSON 保存
   const json = {
     id,
-    title: finalTitle,   // ← ★重複処理後のタイトル
+    title: finalTitle,
     category,
     markers,
     comments,
@@ -169,7 +165,7 @@ app.get("/listPresets", (req, res) => {
 });
 
 // ===============================
-// プリセットアップロード（Render対応）
+// プリセットアップロード
 // ===============================
 const upload = multer({ dest: TMP_DIR });
 
@@ -218,7 +214,7 @@ app.get("/presetImage", (req, res) => {
 });
 
 // ===============================
-// Socket.IO
+// Socket.IO（リアルタイム同期）
 // ===============================
 let markers = [];
 let comments = [];
@@ -227,6 +223,13 @@ io.on("connection", socket => {
   socket.emit("loadMarkers", markers);
   socket.emit("pastComments", groupComments());
 
+  // ★ 新エディタのリアルタイム同期
+  socket.on("edit_state", s => {
+    console.log("edit_state received");
+    socket.broadcast.emit("edit_state", s);
+  });
+
+  // ===== 以下は旧仕様のマーカー・コメント同期 =====
   socket.on("addMarker", m => {
     m._id = uuidv4();
     markers.push(m);
