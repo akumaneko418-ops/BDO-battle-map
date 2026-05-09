@@ -537,7 +537,7 @@ canvas.addEventListener("drop", e => {
 
 // ====================== 保存処理 ======================
 
-document.getElementById("saveBtn").onclick = async () => {
+document.getElementById("saveAllBtn").onclick = async () => {
     if (!backgroundImage) {
         alert("背景画像がありません");
         return;
