@@ -384,3 +384,9 @@ button:hover {
 #redoBtn {
     min-width: 60px !important;
 }
+#undoBtn,
+#redoBtn {
+    width: 70px !important;   /* ← 強制的に横幅を確保 */
+    flex: 0 0 70px !important; /* ← flex に潰されないように固定 */
+    text-align: center;
+}
