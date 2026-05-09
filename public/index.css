@@ -29,6 +29,14 @@ body {
 }
 
 /* ===============================
+   説明文の余白
+=============================== */
+t {
+    display: block;
+    margin-bottom: 20px; /* ← fold-header と同じ余白 */
+}
+
+/* ===============================
    新規作成ボタン（＋追加と統一）
 =============================== */
 .new-create-btn {
@@ -40,8 +48,8 @@ body {
     cursor: pointer;
     font-size: 18px;
     font-weight: 700;
-   margin-top: 10px
-    margin-bottom: 20px;
+    margin-top: 10px;
+    margin-bottom: 20px; /* ← セミコロン抜け修正済み */
     display: inline-block;
 }
 
@@ -138,6 +146,8 @@ body {
     cursor: pointer;
     text-decoration: underline;
 }
+
+/* 右側の＋追加ボタン */
 .right-btn {
     padding: 6px 12px;
     background: #4da3ff;
@@ -151,8 +161,4 @@ body {
 
 .right-btn:hover {
     background: #3b8fe0;
-}
-t {
-    display: block;
-    margin-bottom: 6px; /* 好きな値に調整してOK */
 }
