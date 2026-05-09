@@ -1,3 +1,6 @@
+/* ===============================
+   基本レイアウト
+=============================== */
 body {
     margin: 0;
     padding: 0;
@@ -7,43 +10,47 @@ body {
 }
 
 .top-bar {
-    height: 56px !important;
-    font-size: 20px !important;
+    height: 56px;
+    font-size: 26px;
     padding: 0 20px;
     background: #000;
     color: #fff;
     display: flex;
     align-items: center;
-    justify-content: space-between; /* ★ 追加：左右に配置 */
     font-weight: 700;
 }
 
+/* ===============================
+   ページコンテナ
+=============================== */
 .page-container {
     margin-top: 16px;
     padding: 0 16px;
-    font-family: "Noto Sans JP", sans-serif;
 }
 
-.primary-btn {
-    padding: 0px 16px;
+/* ===============================
+   新規作成ボタン（＋追加と統一）
+=============================== */
+.new-create-btn {
+    padding: 10px 18px;
     background: #4da3ff;
     color: white;
     border: none;
     border-radius: 6px;
     cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
     margin-bottom: 20px;
-        gap: 6px;
+    display: inline-block;
 }
 
-.right-btn {
-    padding: 4px 10px;
-    background: #4da3ff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+.new-create-btn:hover {
+    background: #3b8fe0;
 }
 
+/* ===============================
+   折りたたみヘッダー（プリセット・カテゴリ共通）
+=============================== */
 .fold-header {
     font-weight: bold;
     cursor: pointer;
@@ -64,16 +71,23 @@ body {
     margin-right: 6px;
 }
 
+/* プリセット管理ヘッダー専用（右側に＋追加ボタン） */
 .preset-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
+/* ===============================
+   折りたたみコンテンツ
+=============================== */
 .fold-content {
     padding: 10px 20px;
 }
 
+/* ===============================
+   一覧アイテム
+=============================== */
 .item-row {
     display: flex;
     justify-content: space-between;
@@ -81,37 +95,31 @@ body {
     border-bottom: 1px solid #ddd;
 }
 
-/* 既存の item-row button は削除ボタン用として残す */
-.item-row button {
-    padding: 4px 8px;
-    background: #ff6b6b;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-.saved-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-}
+/* ===============================
+   ボタン類
+=============================== */
 
-/* 編集ボタン（青） */
-.edit-btn {
-    padding: 4px 8px;
+/* 編集ボタン（＋追加と同じ青） */
+.edit-btn,
+.editPresetBtn {
+    padding: 6px 12px;
     background: #4da3ff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 14px;
     margin-right: 6px;
+}
+
+.edit-btn:hover,
+.editPresetBtn:hover {
+    background: #0066d6;
 }
 
 /* 削除ボタン（赤） */
 .delete-btn {
-    padding: 4px 8px;
+    padding: 6px 12px;
     background: #ff6b6b;
     color: white;
     border: none;
@@ -122,75 +130,10 @@ body {
 .delete-btn:hover {
     background: #c9302c;
 }
-/* プリセット名（クリック可能） */
+
+/* プリセット名リンク */
 .preset-link {
     color: #4da3ff;
     cursor: pointer;
     text-decoration: underline;
-}
-/* ヘッダーの表示範囲を少し大きくする */
-.top-bar {
-    height: 56px !important;
-    font-size: 26px !important;
-    padding-left: 20px; /* 少しだけ余裕を持たせる */
-}
-.newbtn {
-    width: 100%;
-    padding: 18px 0;
-    font-size: 20px;
-    font-weight: 700;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-bottom: 16px;
-}
-
-.newbtn:hover {
-    background: #0066d6;
-}
-.edit-btn,
-.editPresetBtn {
-    background: #4da3ff;;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.edit-btn:hover,
-.editPresetBtn:hover {
-    background: #0066d6;
-}
-.new-create-btn {
-    padding: 10px 18px;
-    background: #4da3ff; /* ＋追加と同じ色 */
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 20px;
-}
-
-.new-create-btn:hover {
-    background: #3b8fe0;
-}
-.categorySectionHeader {
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 20px;
-    padding: 10px;
-    background: #f0f0f0;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-}
-
-.categorySectionHeader .fold-icon {
-    margin-right: 6px;
 }
