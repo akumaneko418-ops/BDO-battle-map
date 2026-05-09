@@ -10,44 +10,39 @@
 <!-- 上部黒バー -->
 <div class="top-bar">
     <span class="title">BDO Battle Map Editor</span>
-
-    <!-- 右端リンク -->
     <a href="index.html" class="top-link">TOP画面へ</a>
 </div>
 
 <!-- ツールバー（白） -->
 <div class="canvas-toolbar">
 
-    <!-- ファイル名入力欄 -->
-<div class="fileNameArea">
-    <select id="categorySelect" class="categorySelect">
-        <option value="バレノス">バレノス</option>
-        <option value="セレンディア">セレンディア</option>
-        <option value="カルフェオン">カルフェオン</option>
-        <option value="メディア">メディア</option>
-        <option value="バレンシア">バレンシア</option>
-        <option value="カーマスリビア">カーマスリビア</option>
-        <option value="ウルキタ">ウルキタ</option>
-    </select>
+    <!-- 左側：カテゴリ + ファイル名 -->
+    <div class="fileNameArea">
+        <select id="categorySelect" class="categorySelect">
+            <option value="バレノス">バレノス</option>
+            <option value="セレンディア">セレンディア</option>
+            <option value="カルフェオン">カルフェオン</option>
+            <option value="メディア">メディア</option>
+            <option value="バレンシア">バレンシア</option>
+            <option value="カーマスリビア">カーマスリビア</option>
+            <option value="ウルキタ">ウルキタ</option>
+        </select>
 
-    <input id="fileNameInput" class="fileNameInput" placeholder="MAPの名前">
-</div>
+        <input id="fileNameInput" class="fileNameInput" placeholder="MAPの名前">
+    </div>
 
+    <!-- ★ 右側：ボタン群をまとめて独立させる -->
+    <div class="toolbar-buttons">
+        <button id="undoBtn">戻る</button>
+        <button id="redoBtn">進む</button>
 
-    <!-- 戻る・進む -->
-    <button id="undoBtn">戻る</button>
-    <button id="redoBtn">進む</button>
+        <button id="zoomOutBtn">－</button>
+        <button id="zoomInBtn">＋</button>
+        <button id="zoomResetBtn">100%表示</button>
 
-    <!-- ズーム -->
-    <button id="zoomOutBtn">－</button>
-    <button id="zoomInBtn">＋</button>
-    <button id="zoomResetBtn">100%表示</button>
-
-    <!-- PNG出力 -->
-    <button id="exportPngBtn">ダウンロード</button>
-
-    <!-- サーバーに保存 -->
-    <button id="saveAllBtn" class="saveButton">画像を保存</button>
+        <button id="exportPngBtn">ダウンロード</button>
+        <button id="saveAllBtn" class="saveButton">画像を保存</button>
+    </div>
 
 </div>
 
