@@ -118,7 +118,6 @@ body {
     font-family: Arial, Helvetica, sans-serif !important;
     letter-spacing: 0 !important;
 
-    /* 潰れ防止 */
     min-width: 60px !important;
     width: 70px !important;
     flex: 0 0 70px !important;
@@ -351,7 +350,7 @@ button:hover {
 }
 
 /* ============================================================
-   ★ 新仕様：右クリックメニュー（context-menu）
+   ★ 右クリックメニュー（旧仕様フル復元版）
 ============================================================ */
 .context-menu {
     position: absolute;
@@ -359,10 +358,13 @@ button:hover {
     color: #fff;
     padding: 6px 0;
     border-radius: 6px;
-    display: none;
     z-index: 9999;
     width: 140px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.context-menu.hidden {
+    display: none;
 }
 
 .context-menu div {
