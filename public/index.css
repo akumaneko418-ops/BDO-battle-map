@@ -32,7 +32,7 @@ body {
    新規作成ボタン（＋追加と統一）
 =============================== */
 .new-create-btn {
-    padding: 18px 18px;
+    padding: 10px 18px;
     background: #4da3ff;
     color: white;
     border: none;
@@ -40,6 +40,7 @@ body {
     cursor: pointer;
     font-size: 18px;
     font-weight: 700;
+   margin-top: 10px
     margin-bottom: 20px;
     display: inline-block;
 }
