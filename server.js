@@ -266,3 +266,56 @@ function groupComments() {
   const grouped = {};
   comments.forEach(c => {
     if (!grouped[c.markerId]) grouped
+function groupComments() {
+  const grouped = {};
+  comments.forEach(c => {
+    if (!grouped[c.markerId]) grouped[c.markerId] = [];
+    grouped[c.markerId].push(c);
+  });
+  return grouped;
+}
+
+// ===============================
+// 保存データ読み込み
+// ===============================
+app.get("/load", (req, res) => {
+  const id = req.query.id;
+  if (!id) return res.status(400).send("No id");
+
+  const filePath = path.join(DATA_DIR, id + ".json");
+  if (!fs.existsSync(filePath)) return res.status(404).send("Not found");
+
+  const json = fs.readFileSync(filePath, "utf8");
+  res.json(JSON.parse(json));
+});
+
+// ===============================
+// 保存処理
+// ===============================
+app.post("/save", (req, res) => {
+  const { title, category, image, markers, comments } = req.body;
+
+  if (!title) return res.json({ success: false });
+
+  const filePath = path.join(DATA_DIR, title + ".json");
+
+  const data = {
+    title,
+    category,
+    image,
+    markers,
+    comments
+  };
+
+  fs.writeFile(filePath, JSON.stringify(data, null, 2), err => {
+    if (err) return res.json({ success: false });
+    res.json({ success: true });
+  });
+});
+
+// ===============================
+// サーバー起動
+// ===============================
+server.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
