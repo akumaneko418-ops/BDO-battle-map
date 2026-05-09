@@ -1,522 +1,808 @@
-// ====================== 初期変数 ======================
-let canvas = document.getElementById("mapCanvas");
-let ctx = canvas.getContext("2d");
+// ====================== Fold UI ======================
+function initFoldUI() {
+    document.querySelectorAll(".fold-content").forEach(fc => fc.style.display = "none");
+    document.querySelectorAll(".fold-icon").forEach(i => i.textContent = "▼");
+    document.querySelectorAll(".fold-header").forEach(h => {
+        h.addEventListener("click", () => {
+            const c = h.nextElementSibling;
+            if (!c) return;
+            const icon = h.querySelector(".fold-icon");
+            const open = c.style.display === "none";
+            c.style.display = open ? "block" : "none";
+            if (icon) icon.textContent = open ? "▲" : "▼";
+        });
+    });
+}
 
+// ====================== 初期設定 ======================
+const socket = io();
+let zoom = 1.0, zoomStep = 0.1;
+const canvas = document.getElementById("mapCanvas");
+const ctx = canvas.getContext("2d");
 let backgroundImage = null;
-let markers = [];
-let arrows = [];
-let texts = [];
-let penPaths = [];
-let markerComments = {}; // ★ コメントは edit_state に統合
 
-let undoStack = [];
-let redoStack = [];
+// ★ パン（右ドラッグ）用
+let offsetX = 0, offsetY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
 
-let currentTool = "marker";
-let currentColor = "#ff66cc";
-let currentSize = 20;
-let currentOpacity = 1.0;
+let markers = [], arrows = [], texts = [], penPaths = [];
+let markerComments = {}, highlightedMarkerId = null;
 
-let isDrawing = false;
-let currentPath = [];
+let selectedObject = null, selectedType = null;
+let transformMode = null, transformStart = null;
 
-let selectedMarker = null;
-let selectedArrow = null;
-let selectedText = null;
+initFoldUI();
 
-let socket = io();
+// ====================== Undo / Redo ======================
+let history = [], redoHistory = [];
 
-// ====================== 状態取得 ======================
+// ★ ズーム・パンは同期しないように除外
 function getCurrentState() {
     return {
-        backgroundImage: backgroundImage ? backgroundImage.src : null,
         markers: structuredClone(markers),
         arrows: structuredClone(arrows),
         texts: structuredClone(texts),
         penPaths: structuredClone(penPaths),
-        markerComments: structuredClone(markerComments) // ★ コメントも同期
+        backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
+        markerComments: structuredClone(markerComments)
     };
 }
 
-// ====================== 状態復元 ======================
 function restoreState(s) {
-    if (!s) return;
-
-    // 背景画像
-    if (s.backgroundImage) {
-        const img = new Image();
-        img.onload = () => {
-            backgroundImage = img;
-            drawCanvas();
-        };
-        img.src = s.backgroundImage;
-    }
-
     markers = s.markers || [];
     arrows = s.arrows || [];
     texts = s.texts || [];
     penPaths = s.penPaths || [];
-    markerComments = s.markerComments || {}; // ★ コメント復元
+    markerComments = s.markerComments || {};
 
-    drawCanvas();
-    updateCommentList();
+    if (s.backgroundImageSrc) {
+        const img = new Image();
+        img.onload = () => { backgroundImage = img; drawCanvas(); updateCommentList(); };
+        img.src = s.backgroundImageSrc;
+    } else {
+        backgroundImage = null;
+        drawCanvas();
+        updateCommentList();
+    }
 }
 
-// ====================== リアルタイム同期 ======================
+function saveHistory() {
+    history.push(JSON.stringify(getCurrentState()));
+    if (history.length > 100) history.shift();
+    redoHistory = [];
+    updateUndoRedoButtons();
+}
+
+// ★ リアルタイム同期用に軽くスロットル
+let lastBroadcastTime = 0;
 function broadcastState() {
     socket.emit("edit_state", getCurrentState());
 }
+function broadcastStateThrottled() {
+    const now = Date.now();
+    if (now - lastBroadcastTime < 50) return;
+    lastBroadcastTime = now;
+    broadcastState();
+}
 
-socket.on("edit_state", s => {
-    restoreState(s);
+socket.on("edit_state", restoreState);
+
+document.getElementById("undoBtn").onclick = () => {
+    cancelTyping();
+    if (!history.length) return;
+    redoHistory.push(JSON.stringify(getCurrentState()));
+    restoreState(JSON.parse(history.pop()));
+    updateUndoRedoButtons();
+    broadcastState();
+};
+
+document.getElementById("redoBtn").onclick = () => {
+    cancelTyping();
+    if (!redoHistory.length) return;
+    history.push(JSON.stringify(getCurrentState()));
+    restoreState(JSON.parse(redoHistory.pop()));
+    updateUndoRedoButtons();
+    broadcastState();
+};
+
+function updateUndoRedoButtons() {
+    document.getElementById("undoBtn").classList.toggle("disabled", !history.length);
+    document.getElementById("redoBtn").classList.toggle("disabled", !redoHistory.length);
+}
+
+// ====================== ツール解除 ======================
+function clearToolSelection() {
+    if (currentTool === "pen") return;
+    currentTool = "none";
+    penMode = false;
+    textAddMode = false;
+
+    document.querySelectorAll(".colorOption, .arrowColorOption, .textColorOption, .penColorOption")
+        .forEach(btn => btn.classList.remove("selected"));
+}
+
+// ====================== ツール設定 ======================
+let currentTool = "none";
+let currentMarkerColor = "#ff7eb9", currentMarkerOpacity = 1.0, currentMarkerSize = 10;
+let currentArrowColor = "#ff7eb9", currentArrowOpacity = 1.0, currentArrowScale = 1.0;
+let currentTextColor = "#ff7eb9", currentTextSize = 16;
+let penMode = false, currentPenColor = "#ff7eb9", currentPenWidth = 3, currentPenOpacity = 1.0;
+let textAddMode = false;
+
+document.getElementById("penClearBtn").onclick = () => {
+    cancelTyping(); saveHistory(); penPaths = []; drawCanvas(); broadcastState();
+};
+
+function activateColor(el) {
+    document.querySelectorAll(".colorOption,.arrowColorOption,.textColorOption,.penColorOption")
+        .forEach(b => b.classList.remove("selected"));
+    el.classList.add("selected");
+}
+
+document.querySelectorAll(".colorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
+        currentMarkerColor = getComputedStyle(el).backgroundColor;
+        activateColor(el); currentTool = "marker"; penMode = false; textAddMode = false;
+        drawCanvas();
+    };
 });
 
-// ====================== 描画処理 ======================
-function drawCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+document.querySelectorAll(".arrowColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
+        currentArrowColor = getComputedStyle(el).backgroundColor;
+        activateColor(el); currentTool = "arrow"; penMode = false; textAddMode = false;
+        drawCanvas();
+    };
+});
 
-    // 背景画像
-    if (backgroundImage) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+document.querySelectorAll(".textColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
+        currentTextColor = getComputedStyle(el).backgroundColor;
+        activateColor(el); currentTool = "text"; textAddMode = true; penMode = false;
+        drawCanvas();
+    };
+});
+
+document.querySelectorAll(".penColorOption").forEach(el => {
+    el.onclick = () => {
+        cancelTyping(); selectedObject = null; selectedType = null;
+        currentPenColor = getComputedStyle(el).backgroundColor;
+        activateColor(el); currentTool = "pen"; penMode = true; textAddMode = false;
+        drawCanvas();
+    };
+});
+
+// ====================== スライダー ======================
+document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
+document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
+
+document.getElementById("markerOpacitySlider").oninput = e => {
+    currentMarkerOpacity = +e.target.value;
+    document.getElementById("markerOpacityValue").textContent = currentMarkerOpacity.toFixed(2);
+};
+
+document.getElementById("arrowOpacitySlider").oninput = e => {
+    currentArrowOpacity = +e.target.value;
+    document.getElementById("arrowOpacityValue").textContent = currentArrowOpacity.toFixed(2);
+};
+
+document.getElementById("penOpacitySlider").oninput = e => {
+    currentPenOpacity = +e.target.value;
+    document.getElementById("penOpacityValue").textContent = currentPenOpacity.toFixed(2);
+};
+
+document.getElementById("textSizeSlider").oninput = e => currentTextSize = +e.target.value;
+document.getElementById("penWidthSlider").oninput = e => currentPenWidth = +e.target.value;
+
+// ====================== 座標変換 ======================
+function getCanvasClickPosition(e) {
+    const rect = canvas.getBoundingClientRect();
+    const rawX = e.clientX - rect.left - offsetX;
+    const rawY = e.clientY - rect.top - offsetY;
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+
+    return {
+        x: (rawX - cx) / zoom + cx,
+        y: (rawY - cy) / zoom + cy
+    };
+}
+
+// ====================== テキスト入力 ======================
+let typing = false, typingText = "", typingX = 0, typingY = 0;
+
+function cancelTyping() {
+    if (typing) {
+        typing = false;
+        typingText = "";
+        drawCanvas();
+    }
+}
+
+document.addEventListener("keydown", e => {
+    if (!typing) return;
+
+    if (e.key === "Enter") {
+        if (typingText.trim()) {
+            saveHistory();
+            texts.push({
+                id: "text_" + Date.now(),
+                x: typingX,
+                y: typingY,
+                text: typingText,
+                color: currentTextColor,
+                size: currentTextSize,
+                angle: 0
+            });
+            broadcastState();
+        }
+        typing = false;
+        typingText = "";
+        drawCanvas();
+        e.preventDefault();
+        return;
     }
 
-    // ペン描画
-    penPaths.forEach(path => {
-        ctx.strokeStyle = path.color;
-        ctx.lineWidth = path.size;
-        ctx.globalAlpha = path.opacity;
+    if (e.key === "Escape") {
+        typing = false;
+        typingText = "";
+        drawCanvas();
+        e.preventDefault();
+        return;
+    }
 
-        ctx.beginPath();
-        path.points.forEach((p, i) => {
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-        });
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
-    });
+    if (e.key === "Backspace") {
+        typingText = typingText.slice(0, -1);
+        drawCanvas();
+        broadcastStateThrottled();
+        e.preventDefault();
+        return;
+    }
 
-    // 矢印描画
-    arrows.forEach(a => {
-        drawArrow(a);
-    });
-
-    // マーカー描画
-    markers.forEach(m => {
-        ctx.save();
-        ctx.globalAlpha = m.opacity ?? 1.0;
-
-        // 円
-        ctx.fillStyle = m.color;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        // ★ 中央に名前を描画（白文字・サイズ比例）
-        if (m.name) {
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = "#fff";
-            ctx.font = `700 ${m.size * 1.2}px "Noto Sans JP","Yu Gothic",sans-serif`;
-
-            ctx.shadowColor = "rgba(0,0,0,0.6)";
-            ctx.shadowBlur = 6;
-
-            ctx.fillText(m.name, m.x, m.y);
-        }
-
-        ctx.restore();
-    });
-
-    // テキスト描画
-    texts.forEach(t => {
-        ctx.save();
-        ctx.globalAlpha = t.opacity ?? 1.0;
-
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = t.color;
-        ctx.font = `${t.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
-
-        ctx.fillText(t.text, t.x, t.y);
-        ctx.restore();
-    });
-}
-
-// ====================== マーカー操作 ======================
-
-// マーカー追加
-function addMarker(x, y) {
-    saveHistory();
-
-    markers.push({
-        x,
-        y,
-        color: currentColor,
-        size: currentSize,
-        opacity: currentOpacity,
-        name: "" // ★ 名前は空で開始
-    });
-
-    drawCanvas();
-    broadcastState();
-}
-
-// マーカー選択
-function getMarkerAt(x, y) {
-    return markers.find(m => {
-        const dx = x - m.x;
-        const dy = y - m.y;
-        return Math.sqrt(dx * dx + dy * dy) <= m.size;
-    });
-}
-
-// マーカー移動
-function moveMarker(marker, x, y) {
-    saveHistory();
-    marker.x = x;
-    marker.y = y;
-
-    drawCanvas();
-    broadcastState();
-}
-
-// マーカー削除
-function deleteMarker(marker) {
-    saveHistory();
-    markers = markers.filter(m => m !== marker);
-
-    // コメントも削除
-    delete markerComments[marker._id];
-
-    drawCanvas();
-    broadcastState();
-    updateCommentList();
-}
-
-// ====================== 右クリックメニュー ======================
-
-const contextMenu = document.getElementById("contextMenu");
-let contextTarget = null;
-
-canvas.addEventListener("contextmenu", e => {
-    e.preventDefault();
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const m = getMarkerAt(x, y);
-    if (!m) return;
-
-    contextTarget = m;
-
-    contextMenu.style.left = `${e.clientX}px`;
-    contextMenu.style.top = `${e.clientY}px`;
-    contextMenu.style.display = "block";
+    if (e.key.length === 1) {
+        typingText += e.key;
+        drawCanvas();
+        broadcastStateThrottled();
+        e.preventDefault();
+    }
 });
 
-document.addEventListener("click", () => {
-    contextMenu.style.display = "none";
-});
+// ====================== バウンディングボックス ======================
+function getBoundingBox(obj, type) {
+    if (type === "arrow") {
+        const s = 25 * (obj.scale || 1);
+        return { x: obj.x - s, y: obj.y - s, w: s * 2, h: s * 2 };
+    }
 
-// ★ 名前変更
-document.getElementById("renameMarkerBtn").onclick = () => {
-    if (!contextTarget) return;
+    if (type === "text") {
+        ctx.save();
+        ctx.font = `700 ${obj.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        const w = ctx.measureText(obj.text).width;
+        ctx.restore();
+        return { x: obj.x, y: obj.y - obj.size, w, h: obj.size };
+    }
 
-    const newName = prompt("新しい砦の名前を入力してください：");
-    if (!newName) return;
-
-    saveHistory();
-    contextTarget.name = newName;
-
-    drawCanvas();
-    broadcastState();
-    updateCommentList();
-};
-
-// 削除
-document.getElementById("deleteMarkerBtn").onclick = () => {
-    if (!contextTarget) return;
-    deleteMarker(contextTarget);
-};
-// ====================== テキストツール ======================
-
-function addText(x, y) {
-    const text = prompt("テキストを入力してください：");
-    if (!text) return;
-
-    saveHistory();
-
-    texts.push({
-        x,
-        y,
-        text,
-        color: currentColor,
-        size: currentSize * 2,
-        opacity: currentOpacity
-    });
-
-    drawCanvas();
-    broadcastState();
+    return { x: 0, y: 0, w: 0, h: 0 };
 }
 
-function getTextAt(x, y) {
-    return texts.find(t => {
-        const width = ctx.measureText(t.text).width;
-        const height = t.size;
-        return x >= t.x && x <= t.x + width && y >= t.y && y <= t.y + height;
-    });
-}
+function drawTransformHandles(obj, type) {
+    const b = getBoundingBox(obj, type);
 
-function moveText(t, x, y) {
-    saveHistory();
-    t.x = x;
-    t.y = y;
-
-    drawCanvas();
-    broadcastState();
-}
-
-// ====================== 矢印ツール ======================
-
-function addArrow(startX, startY, endX, endY) {
-    saveHistory();
-
-    arrows.push({
-        startX,
-        startY,
-        endX,
-        endY,
-        color: currentColor,
-        size: currentSize,
-        opacity: currentOpacity
-    });
-
-    drawCanvas();
-    broadcastState();
-}
-
-function getArrowAt(x, y) {
-    return arrows.find(a => {
-        const dx = a.endX - a.startX;
-        const dy = a.endY - a.startY;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        if (length === 0) return false;
-
-        const t = ((x - a.startX) * dx + (y - a.startY) * dy) / (length * length);
-        if (t < 0 || t > 1) return false;
-
-        const projX = a.startX + t * dx;
-        const projY = a.startY + t * dy;
-
-        const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
-        return dist <= a.size + 4;
-    });
-}
-
-function moveArrow(a, dx, dy) {
-    saveHistory();
-
-    a.startX += dx;
-    a.startY += dy;
-    a.endX += dx;
-    a.endY += dy;
-
-    drawCanvas();
-    broadcastState();
-}
-
-function drawArrow(a) {
     ctx.save();
-    ctx.globalAlpha = a.opacity ?? 1.0;
-    ctx.strokeStyle = a.color;
-    ctx.lineWidth = a.size;
+    ctx.strokeStyle = "#4da3ff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
 
+    const size = 8;
+    [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]].forEach(([hx, hy]) => {
+        ctx.fillStyle = "#4da3ff";
+        ctx.fillRect(hx - size / 2, hy - size / 2, size, size);
+    });
+
+    const rx = b.x + b.w / 2;
+    const ry = b.y - 20;
     ctx.beginPath();
-    ctx.moveTo(a.startX, a.startY);
-    ctx.lineTo(a.endX, a.endY);
-    ctx.stroke();
-
-    const angle = Math.atan2(a.endY - a.startY, a.endX - a.startX);
-    const headLen = a.size * 3;
-
-    ctx.beginPath();
-    ctx.moveTo(a.endX, a.endY);
-    ctx.lineTo(
-        a.endX - headLen * Math.cos(angle - Math.PI / 6),
-        a.endY - headLen * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.lineTo(
-        a.endX - headLen * Math.cos(angle + Math.PI / 6),
-        a.endY - headLen * Math.sin(angle + Math.PI / 6)
-    );
-    ctx.closePath();
-    ctx.fillStyle = a.color;
+    ctx.arc(rx, ry, 6, 0, Math.PI * 2);
+    ctx.fillStyle = "#4da3ff";
     ctx.fill();
 
     ctx.restore();
 }
 
-// ====================== ペンツール ======================
+function hitScaleHandle(px, py, b) {
+    const s = 10;
+    return [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]]
+        .some(([hx, hy]) => Math.abs(px - hx) <= s && Math.abs(py - hy) <= s);
+}
+
+function hitRotateHandle(px, py, b) {
+    const rx = b.x + b.w / 2;
+    const ry = b.y - 20;
+    return (px - rx) ** 2 + (py - ry) ** 2 <= 100;
+}
+
+// ====================== クリック処理 ======================
+canvas.addEventListener("click", e => {
+    const { x, y } = getCanvasClickPosition(e);
+
+    if (currentTool === "text") {
+        typing = true;
+        typingText = "";
+        typingX = x;
+        typingY = y;
+        selectedObject = null;
+        selectedType = null;
+        drawCanvas();
+        broadcastState();
+        return;
+    }
+
+    const hitArrow = hitTestArrow(x, y);
+    const hitText = texts.find(t => {
+        const b = getBoundingBox(t, "text");
+        return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+    });
+
+    if (hitArrow) {
+        selectedObject = hitArrow;
+        selectedType = "arrow";
+        drawCanvas();
+        return;
+    }
+
+    if (hitText) {
+        selectedObject = hitText;
+        selectedType = "text";
+        drawCanvas();
+        return;
+    }
+
+    if (currentTool === "marker") {
+        saveHistory();
+        markers.push({
+            id: "marker_" + Date.now(),
+            x, y,
+            name: document.getElementById("markerName").value,
+            color: currentMarkerColor,
+            opacity: currentMarkerOpacity,
+            size: currentMarkerSize
+        });
+        selectedObject = null;
+        selectedType = null;
+        drawCanvas();
+        broadcastState();
+        updateCommentList();
+        return;
+    }
+
+    if (currentTool === "arrow") {
+        saveHistory();
+        arrows.push({
+            id: "arrow_" + Date.now(),
+            x, y,
+            angle: 0,
+            scale: currentArrowScale,
+            color: currentArrowColor,
+            opacity: currentArrowOpacity
+        });
+        selectedObject = null;
+        selectedType = null;
+        drawCanvas();
+        broadcastState();
+        return;
+    }
+
+    selectedObject = null;
+    selectedType = null;
+    drawCanvas();
+});
+
+// ====================== ヒットテスト ======================
+let draggingMarker = null, draggingArrow = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+
+function hitTestMarker(x, y) {
+    return markers.find(m => {
+        const dx = x - m.x;
+        const dy = y - m.y;
+        return Math.sqrt(dx * dx + dy * dy) <= (m.size || 10);
+    }) || null;
+}
+
+function hitTestArrow(x, y) {
+    const rBase = 25;
+    return arrows.find(a => {
+        const r = rBase * (a.scale || 1);
+        return Math.abs(x - a.x) <= r && Math.abs(y - a.y) <= r;
+    }) || null;
+}
+
+// ====================== ペン・ドラッグ・パン・変形 ======================
+let drawing = false;
 
 canvas.addEventListener("mousedown", e => {
-    if (currentTool !== "pen") return;
+    const { x, y } = getCanvasClickPosition(e);
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    // ★ 右クリックでパン開始
+    if (e.button === 2) {
+        isPanning = true;
+        panStartX = e.clientX - offsetX;
+        panStartY = e.clientY - offsetY;
+        return;
+    }
 
-    isDrawing = true;
-    currentPath = [{ x, y }];
+    const clearTool = () => clearToolSelection();
+
+    if (selectedObject && selectedType) {
+        const b = getBoundingBox(selectedObject, selectedType);
+
+        if (hitScaleHandle(x, y, b)) {
+            clearTool();
+            transformMode = "scale";
+            transformStart = {
+                x, y, box: b,
+                originalScale: selectedType === "arrow" ? selectedObject.scale || 1 : null,
+                originalSize: selectedType === "text" ? selectedObject.size : null
+            };
+            saveHistory();
+            return;
+        }
+
+        if (hitRotateHandle(x, y, b)) {
+            clearTool();
+            transformMode = "rotate";
+            transformStart = {
+                x, y,
+                centerX: selectedType === "arrow" ? selectedObject.x : b.x + b.w / 2,
+                centerY: selectedType === "arrow" ? selectedObject.y : b.y + b.h / 2,
+                originalAngle: selectedObject.angle || 0
+            };
+            saveHistory();
+            return;
+        }
+
+        if (selectedType === "arrow") {
+            if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+                clearTool();
+                saveHistory();
+                draggingArrow = selectedObject;
+                dragOffsetX = x - draggingArrow.x;
+                dragOffsetY = y - draggingArrow.y;
+                return;
+            }
+        }
+
+        if (selectedType === "text") {
+            if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+                clearTool();
+                transformMode = "move";
+                transformStart = {
+                    x, y,
+                    originalX: selectedObject.x,
+                    originalY: selectedObject.y
+                };
+                saveHistory();
+                return;
+            }
+        }
+    }
+
+    if (currentTool === "marker") {
+        const hit = hitTestMarker(x, y);
+        if (hit) {
+            clearTool();
+            saveHistory();
+            draggingMarker = hit;
+            dragOffsetX = x - hit.x;
+            dragOffsetY = y - hit.y;
+            return;
+        }
+    }
+
+    if (currentTool === "arrow") {
+        const hit = hitTestArrow(x, y);
+        if (hit) {
+            clearTool();
+            saveHistory();
+            draggingArrow = hit;
+            dragOffsetX = x - hit.x;
+            dragOffsetY = y - hit.y;
+            selectedObject = hit;
+            selectedType = "arrow";
+            return;
+        }
+    }
+
+    if (currentTool === "pen") {
+        clearTool();
+        drawing = true;
+        saveHistory();
+        penPaths.push({
+            points: [{ x, y }],
+            color: currentPenColor,
+            width: currentPenWidth,
+            opacity: currentPenOpacity
+        });
+        broadcastState(); // 開始時点も共有
+        return;
+    }
 });
 
 canvas.addEventListener("mousemove", e => {
-    if (!isDrawing || currentTool !== "pen") return;
+    const { x, y } = getCanvasClickPosition(e);
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if (transformMode === "scale" && selectedObject && transformStart) {
+        const dx = x - transformStart.x;
+        const dy = y - transformStart.y;
+        const d = Math.max(dx, dy);
 
-    currentPath.push({ x, y });
+        if (selectedType === "arrow") {
+            selectedObject.scale = Math.max(0.2, (transformStart.originalScale || 1) + d / 100);
+        }
+        if (selectedType === "text") {
+            selectedObject.size = Math.max(8, (transformStart.originalSize || selectedObject.size) + d / 2);
+        }
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
 
-    drawCanvas();
-    ctx.strokeStyle = currentColor;
-    ctx.lineWidth = currentSize;
-    ctx.globalAlpha = currentOpacity;
+    if (transformMode === "rotate" && selectedObject && transformStart) {
+        const cx = transformStart.centerX;
+        const cy = transformStart.centerY;
+        selectedObject.angle = Math.atan2(y - cy, x - cx);
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
 
-    ctx.beginPath();
-    currentPath.forEach((p, i) => {
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-    });
-    ctx.stroke();
-    ctx.globalAlpha = 1.0;
+    if (transformMode === "move" && selectedType === "text" && transformStart) {
+        selectedObject.x = transformStart.originalX + (x - transformStart.x);
+        selectedObject.y = transformStart.originalY + (y - transformStart.y);
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (draggingMarker) {
+        draggingMarker.x = x - dragOffsetX;
+        draggingMarker.y = y - dragOffsetY;
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (draggingArrow) {
+        draggingArrow.x = x - dragOffsetX;
+        draggingArrow.y = y - dragOffsetY;
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    if (drawing) {
+        penPaths[penPaths.length - 1].points.push({ x, y });
+        drawCanvas();
+        broadcastStateThrottled();
+        return;
+    }
+
+    // ★ 右ドラッグパン（これは自分だけの表示なので同期しない）
+    if (isPanning) {
+        offsetX = e.clientX - panStartX;
+        offsetY = e.clientY - panStartY;
+        drawCanvas();
+    }
 });
 
 canvas.addEventListener("mouseup", () => {
-    if (!isDrawing || currentTool !== "pen") return;
+    const changed = drawing || draggingMarker || draggingArrow || transformMode;
 
-    isDrawing = false;
+    drawing = false;
+    draggingMarker = null;
+    draggingArrow = null;
+    transformMode = null;
+    transformStart = null;
 
-    saveHistory();
+    // ★ 右ドラッグパン終了
+    isPanning = false;
 
-    penPaths.push({
-        color: currentColor,
-        size: currentSize,
-        opacity: currentOpacity,
-        points: structuredClone(currentPath)
-    });
+    if (changed) {
+        drawCanvas();
+        broadcastState();
+        updateCommentList();
+    }
+});
 
-    currentPath = [];
+// ====================== ズーム ======================
+document.getElementById("zoomInBtn").onclick = () => {
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
+
+    zoom += zoomStep;
 
     drawCanvas();
-    broadcastState();
-});
+    // ズームは同期しない
+};
 
-// ====================== コメント同期（edit_state 統合版） ======================
+document.getElementById("zoomOutBtn").onclick = () => {
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
 
-// コメント追加
-function addComment(marker, message) {
-    if (!markerComments[marker._id]) {
-        markerComments[marker._id] = [];
+    zoom = Math.max(0.2, zoom - zoomStep);
+
+    drawCanvas();
+};
+
+document.getElementById("zoomResetBtn").onclick = () => {
+    cancelTyping();
+    selectedObject = null;
+    selectedType = null;
+
+    zoom = 1.0;
+
+    drawCanvas();
+};
+
+// ====================== PNG書き出し ======================
+document.getElementById("exportPngBtn").onclick = () => {
+    cancelTyping();
+
+    const fileNameInput = document.getElementById("fileNameInput");
+    let title = fileNameInput.value.trim();
+
+    if (!title) title = "battle-map";
+
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `${title}.png`;
+    a.click();
+};
+
+// ====================== 描画処理 ======================
+function drawCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+
+    // ★ パン（右ドラッグ）とズーム
+    ctx.translate(offsetX, offsetY);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+    if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0);
+
+    // ペン
+    penPaths.forEach(p => {
+        ctx.save();
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.width;
+        ctx.globalAlpha = p.opacity;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        p.points.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y));
+        ctx.stroke();
+        ctx.restore();
+    });
+
+    // マーカー
+    markers.forEach(m => {
+        ctx.save();
+        ctx.globalAlpha = m.opacity;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.size || 10, 0, Math.PI * 2);
+        ctx.fillStyle = m.color;
+        ctx.fill();
+
+        ctx.fillStyle = "#000";
+        ctx.font = `700 14px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillText(m.name, m.x + (m.size || 10) + 4, m.y + 4);
+        ctx.restore();
+    });
+
+    // マーカー強調
+    if (highlightedMarkerId) {
+        const m = markers.find(mm => mm.id === highlightedMarkerId);
+        if (m) {
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, (m.size || 10) + 12, 0, Math.PI * 2);
+            ctx.fillStyle = m.color;
+            ctx.fill();
+            ctx.restore();
+        }
     }
 
-    markerComments[marker._id].push({
-        id: crypto.randomUUID(),
-        message,
-        time: Date.now()
+    // 矢印
+    arrows.forEach(a => {
+        ctx.save();
+        ctx.translate(a.x, a.y);
+        ctx.rotate(a.angle || 0);
+        ctx.scale(a.scale || 1, a.scale || 1);
+        ctx.globalAlpha = a.opacity || currentArrowOpacity;
+
+        ctx.beginPath();
+        ctx.moveTo(0, -25);
+        ctx.lineTo(10, 0);
+        ctx.lineTo(4, 0);
+        ctx.lineTo(4, 25);
+        ctx.lineTo(-4, 25);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(-10, 0);
+        ctx.closePath();
+
+        ctx.fillStyle = a.color || currentArrowColor;
+        ctx.fill();
+        ctx.restore();
     });
 
-    saveHistory();
-    updateCommentList();
-    broadcastState();
-}
+    // テキスト
+    texts.forEach(t => {
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        if (t.angle) ctx.rotate(t.angle);
 
-// コメント編集
-function editComment(markerId, commentId, newMessage) {
-    const list = markerComments[markerId];
-    if (!list) return;
+        ctx.font = `700 ${t.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillStyle = t.color;
 
-    const c = list.find(x => x.id === commentId);
-    if (!c) return;
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
 
-    c.message = newMessage;
-
-    saveHistory();
-    updateCommentList();
-    broadcastState();
-}
-
-// コメント削除
-function deleteComment(markerId, commentId) {
-    const list = markerComments[markerId];
-    if (!list) return;
-
-    markerComments[markerId] = list.filter(c => c.id !== commentId);
-
-    saveHistory();
-    updateCommentList();
-    broadcastState();
-}
-
-// コメント欄更新
-function updateCommentList() {
-    const box = document.getElementById("commentList");
-    box.innerHTML = "";
-
-    markers.forEach(m => {
-        const list = markerComments[m._id];
-        if (!list || list.length === 0) return;
-
-        const title = document.createElement("div");
-        title.className = "comment-title";
-        title.textContent = m.name || "無名の砦";
-        box.appendChild(title);
-
-        list.forEach(c => {
-            const item = document.createElement("div");
-            item.className = "comment-item";
-            item.textContent = c.message;
-            box.appendChild(item);
-        });
+        ctx.fillText(t.text, 0, 0);
+        ctx.restore();
     });
+
+    // 入力中テキスト
+    if (typing) {
+        ctx.save();
+        ctx.font = `700 ${currentTextSize}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        ctx.fillStyle = currentTextColor;
+
+        ctx.shadowColor = "rgba(255,255,255,0.9)";
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        ctx.fillText(typingText, typingX, typingY);
+
+        const w = ctx.measureText(typingText).width;
+        const cx = typingX + w + 2;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, typingY - currentTextSize);
+        ctx.lineTo(cx, typingY + 4);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = currentTextColor;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    // 選択中オブジェクトの変形ハンドル
+    if (selectedObject && selectedType) drawTransformHandles(selectedObject, selectedType);
+
+    ctx.restore();
 }
-// ====================== Undo / Redo ======================
 
-function saveHistory() {
-    undoStack.push(getCurrentState());
-    redoStack = [];
-}
+// ====================== ドロップ ======================
+window.addEventListener("dragover", e => e.preventDefault(), false);
+window.addEventListener("drop", e => e.preventDefault(), false);
+document.body.addEventListener("dragover", e => e.preventDefault());
+document.body.addEventListener("drop", e => e.preventDefault());
 
-function undo() {
-    if (undoStack.length === 0) return;
-
-    redoStack.push(getCurrentState());
-    const prev = undoStack.pop();
-    restoreState(prev);
-}
-
-function redo() {
-    if (redoStack.length === 0) return;
-
-    undoStack.push(getCurrentState());
-    const next = redoStack.pop();
-    restoreState(next);
-}
-
-document.getElementById("undoBtn").onclick = undo;
-document.getElementById("redoBtn").onclick = redo;
-
-
-// ====================== 画像読み込み ======================
-
-canvas.addEventListener("dragover", e => {
+document.body.addEventListener("drop", e => {
     e.preventDefault();
-});
-
-canvas.addEventListener("drop", e => {
-    e.preventDefault();
-
     const file = e.dataTransfer.files[0];
     if (!file) return;
 
@@ -524,8 +810,11 @@ canvas.addEventListener("drop", e => {
     reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-            backgroundImage = img;
             saveHistory();
+            canvas.width = img.width;
+            canvas.height = img.height;
+            backgroundImage = img;
+            document.getElementById("dropHint").style.display = "none";
             drawCanvas();
             broadcastState();
         };
@@ -534,157 +823,245 @@ canvas.addEventListener("drop", e => {
     reader.readAsDataURL(file);
 });
 
+// ====================== 右クリックメニュー ======================
+canvas.addEventListener("contextmenu", e => {
+    e.preventDefault();
+    const { x, y } = getCanvasClickPosition(e);
+
+    const hitMarker = hitTestMarker(x, y);
+    const hitArrow = hitTestArrow(x, y);
+    const hitText = texts.find(t => {
+        const b = getBoundingBox(t, "text");
+        return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+    });
+
+    hideAllMenus();
+
+    if (hitMarker) {
+        window.selectedMarker = hitMarker;
+        showMenu("markerMenu", e.clientX, e.clientY);
+        return;
+    }
+    if (hitArrow) {
+        window.selectedArrow = hitArrow;
+        showMenu("arrowMenu", e.clientX, e.clientY);
+        return;
+    }
+    if (hitText) {
+        window.selectedText = hitText;
+        showMenu("textMenu", e.clientX, e.clientY);
+        return;
+    }
+});
+
+function hideAllMenus() {
+    document.getElementById("markerMenu").classList.add("hidden");
+    document.getElementById("arrowMenu").classList.add("hidden");
+    document.getElementById("textMenu").classList.add("hidden");
+}
+
+function showMenu(id, x, y) {
+    const m = document.getElementById(id);
+    m.style.left = x + "px";
+    m.style.top = y + "px";
+    m.classList.remove("hidden");
+}
+
+// ====================== メニュー操作 ======================
+document.getElementById("deleteMarkerBtn").onclick = () => {
+    if (!window.selectedMarker) return;
+    saveHistory();
+    markers = markers.filter(m => m !== window.selectedMarker);
+    delete markerComments[window.selectedMarker.id];
+    hideAllMenus();
+    drawCanvas();
+    updateCommentList();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateLeftBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle = (window.selectedArrow.angle || 0) - Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowRotateRightBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    window.selectedArrow.angle = (window.selectedArrow.angle || 0) + Math.PI / 8;
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("arrowDeleteBtn").onclick = () => {
+    if (!window.selectedArrow) return;
+    saveHistory();
+    arrows = arrows.filter(a => a !== window.selectedArrow);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("deleteTextBtn").onclick = () => {
+    if (!window.selectedText) return;
+    saveHistory();
+    texts = texts.filter(t => t !== window.selectedText);
+    hideAllMenus();
+    drawCanvas();
+    broadcastState();
+};
+
+document.getElementById("addCommentBtn").onclick = () => {
+    if (!window.selectedMarker) return;
+    const t = prompt("コメントを入力してください：");
+    if (!t) return;
+
+    const m = window.selectedMarker;
+    if (!markerComments[m.id]) markerComments[m.id] = [];
+    markerComments[m.id].push(t);
+
+    updateCommentList();
+    hideAllMenus();
+};
+
+function updateCommentList() {
+    const list = document.getElementById("commentList");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    markers.forEach(m => {
+        const cs = markerComments[m.id];
+        if (!cs) return;
+
+        cs.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "commentItem";
+
+            const name = document.createElement("span");
+            name.className = "markerName";
+            name.textContent = m.name || "(無名)";
+            name.style.color = m.color;
+
+            const text = document.createElement("span");
+            text.textContent = "：" + c;
+
+            name.onmouseenter = () => {
+                highlightedMarkerId = m.id;
+                drawCanvas();
+            };
+            name.onmouseleave = () => {
+                highlightedMarkerId = null;
+                drawCanvas();
+            };
+
+            div.appendChild(name);
+            div.appendChild(text);
+            list.appendChild(div);
+        });
+    });
+}
+
+document.addEventListener("click", () => hideAllMenus());
 
 // ====================== 保存処理 ======================
+let currentTitle = null;
 
 document.getElementById("saveAllBtn").onclick = async () => {
-    if (!backgroundImage) {
-        alert("背景画像がありません");
+    cancelTyping();
+
+    const fileNameInput = document.getElementById("fileNameInput");
+    const title = fileNameInput.value.trim();
+
+    if (!title) {
+        alert("ファイル名を入力してください");
         return;
     }
 
-    const title = prompt("保存名を入力してください：");
-    if (!title) return;
-
-    const imageData = canvas.toDataURL("image/png");
+    currentTitle = title;
 
     const res = await fetch("/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            title,
-            image: imageData,
+            title: currentTitle,
+            category: document.getElementById("categorySelect").value,
+            image: canvas.toDataURL(),
             markers,
-            comments: markerComments,
-            category: "未分類"
+            comments: markerComments
         })
     });
 
     const json = await res.json();
+
     if (json.success) {
         alert("保存しました！");
+        location.href = "index.html";
+    } else {
+        alert("保存に失敗しました");
     }
 };
 
+// ====================== 保存データロード ======================
+async function loadDataIfNeeded() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    if (!id) return;
 
-// ====================== キャンバスクリック処理 ======================
+    const res = await fetch(`/load?id=${id}`);
+    const data = await res.json();
 
-canvas.addEventListener("mousedown", e => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    document.getElementById("fileNameInput").value = data.title;
+    currentTitle = data.title;
 
-    // ペンツールは Part2 で処理済み
-    if (currentTool === "pen") return;
-
-    // マーカー選択
-    const m = getMarkerAt(x, y);
-    if (m) {
-        selectedMarker = m;
-        return;
-    }
-
-    // テキスト選択
-    const t = getTextAt(x, y);
-    if (t) {
-        selectedText = t;
-        return;
-    }
-
-    // 矢印選択
-    const a = getArrowAt(x, y);
-    if (a) {
-        selectedArrow = a;
-        return;
-    }
-
-    // 新規追加
-    if (currentTool === "marker") addMarker(x, y);
-    if (currentTool === "text") addText(x, y);
-});
-
-canvas.addEventListener("mousemove", e => {
-    if (!selectedMarker && !selectedText && !selectedArrow) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (selectedMarker) moveMarker(selectedMarker, x, y);
-    if (selectedText) moveText(selectedText, x, y);
-    if (selectedArrow) {
-        const dx = x - selectedArrow.startX;
-        const dy = y - selectedArrow.startY;
-        moveArrow(selectedArrow, dx, dy);
-    }
-});
-
-canvas.addEventListener("mouseup", () => {
-    selectedMarker = null;
-    selectedText = null;
-    selectedArrow = null;
-});
-
-// ====================== UI 連動 ======================
-
-// 砦マーカー
-const markerSizeSlider = document.getElementById("markerSizeSlider");
-if (markerSizeSlider) {
-    markerSizeSlider.oninput = e => {
-        currentSize = Number(e.target.value);
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        backgroundImage = img;
+        document.getElementById("dropHint").style.display = "none";
+        drawCanvas();
     };
+    img.src = data.image;
+
+    markers = data.markers || [];
+    markerComments = data.comments || {};
+
+    updateCommentList();
+    drawCanvas();
 }
 
-const markerOpacitySlider = document.getElementById("markerOpacitySlider");
-if (markerOpacitySlider) {
-    markerOpacitySlider.oninput = e => {
-        currentOpacity = Number(e.target.value);
-        const v = document.getElementById("markerOpacityValue");
-        if (v) v.textContent = currentOpacity.toFixed(2);
-    };
-}
+// ====================== プリセットロード ======================
+async function loadPresetIfNeeded() {
+    const params = new URLSearchParams(location.search);
+    const preset = params.get("preset");
+    if (!preset) return;
 
-// 矢印
-const arrowSizeSlider = document.getElementById("arrowSizeSlider");
-if (arrowSizeSlider) {
-    arrowSizeSlider.oninput = e => {
-        currentSize = Number(e.target.value);
-    };
-}
+    const res = await fetch(`/presetImage?name=${preset}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
 
-const arrowOpacitySlider = document.getElementById("arrowOpacitySlider");
-if (arrowOpacitySlider) {
-    arrowOpacitySlider.oninput = e => {
-        currentOpacity = Number(e.target.value);
-        const v = document.getElementById("arrowOpacityValue");
-        if (v) v.textContent = currentOpacity.toFixed(2);
+    const img = new Image();
+    img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        backgroundImage = img;
+        document.getElementById("dropHint").style.display = "none";
+        drawCanvas();
     };
-}
+    img.src = url;
 
-// テキスト
-const textSizeSlider = document.getElementById("textSizeSlider");
-if (textSizeSlider) {
-    textSizeSlider.oninput = e => {
-        currentSize = Number(e.target.value);
-    };
-}
-
-// ペン
-const penOpacitySlider = document.getElementById("penOpacitySlider");
-if (penOpacitySlider) {
-    penOpacitySlider.oninput = e => {
-        currentOpacity = Number(e.target.value);
-        const v = document.getElementById("penOpacityValue");
-        if (v) v.textContent = currentOpacity.toFixed(2);
-    };
-}
-
-const penWidthSlider = document.getElementById("penWidthSlider");
-if (penWidthSlider) {
-    penWidthSlider.oninput = e => {
-        currentSize = Number(e.target.value);
-    };
+    document.getElementById("fileNameInput").value = preset;
+    currentTitle = preset;
 }
 
 // ====================== 初期描画 ======================
+updateUndoRedoButtons();
 drawCanvas();
+updateCommentList();
+loadDataIfNeeded();
+loadPresetIfNeeded();
