@@ -1,5 +1,5 @@
 // ====================== 初期変数 ======================
-let canvas = document.getElementById("canvas");
+let canvas = document.getElementById("mapCanvas");
 let ctx = canvas.getContext("2d");
 
 let backgroundImage = null;
