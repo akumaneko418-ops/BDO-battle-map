@@ -148,26 +148,30 @@ async function deletePreset(name) {
 }
 
 // ===============================
-// プリセット追加
+// ★ プリセットアップロード（Render対応）
 // ===============================
-document.getElementById("addPresetBtn").onclick = () => {
-    document.getElementById("presetFileInput").click();
-};
+const TMP_DIR = path.join(__dirname, "tmp");
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 
-document.getElementById("presetFileInput").onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
+const upload = multer({ dest: TMP_DIR });
 
-    const form = new FormData();
-    form.append("preset", file);
+app.post("/uploadPreset", upload.single("preset"), (req, res) => {
+  if (!req.file) return res.status(400).send("No file");
 
-    await fetch("/uploadPreset", {
-        method: "POST",
-        body: form
-    });
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  if (ext !== ".png") return res.status(400).send("PNG only");
 
-    loadPresets();
-};
+  const newName = req.file.filename + ".png";
+  const newPath = path.join(PRESET_DIR, newName);
+
+  fs.rename(req.file.path, newPath, (err) => {
+    if (err) {
+      console.error("Preset save error:", err);
+      return res.status(500).send("Save failed");
+    }
+    res.send("OK");
+  });
+});
 
 // ===============================
 // 初期ロード
