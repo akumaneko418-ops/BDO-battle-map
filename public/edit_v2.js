@@ -625,25 +625,42 @@ canvas.addEventListener("mouseup", () => {
     selectedArrow = null;
 });
 
-
 // ====================== UI 連動 ======================
 
-document.getElementById("colorPicker").oninput = e => {
-    currentColor = e.target.value;
-};
-
-document.getElementById("sizeSlider").oninput = e => {
+// 砦マーカー
+document.getElementById("markerSizeSlider").oninput = e => {
     currentSize = Number(e.target.value);
 };
 
-document.getElementById("opacitySlider").oninput = e => {
+document.getElementById("markerOpacitySlider").oninput = e => {
     currentOpacity = Number(e.target.value);
+    document.getElementById("markerOpacityValue").textContent = currentOpacity.toFixed(2);
 };
 
-document.getElementById("toolMarker").onclick = () => currentTool = "marker";
-document.getElementById("toolText").onclick = () => currentTool = "text";
-document.getElementById("toolArrow").onclick = () => currentTool = "arrow";
-document.getElementById("toolPen").onclick = () => currentTool = "pen";
+// 矢印
+document.getElementById("arrowSizeSlider").oninput = e => {
+    currentSize = Number(e.target.value);
+};
+
+document.getElementById("arrowOpacitySlider").oninput = e => {
+    currentOpacity = Number(e.target.value);
+    document.getElementById("arrowOpacityValue").textContent = currentOpacity.toFixed(2);
+};
+
+// テキスト
+document.getElementById("textSizeSlider").oninput = e => {
+    currentSize = Number(e.target.value);
+};
+
+// ペン
+document.getElementById("penOpacitySlider").oninput = e => {
+    currentOpacity = Number(e.target.value);
+    document.getElementById("penOpacityValue").textContent = currentOpacity.toFixed(2);
+};
+
+document.getElementById("penWidthSlider").oninput = e => {
+    currentSize = Number(e.target.value);
+};
 
 
 // ====================== 初期描画 ======================
