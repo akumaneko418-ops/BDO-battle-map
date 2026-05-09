@@ -21,9 +21,11 @@ const PORT = process.env.PORT || 3000;
 // ===============================
 const DATA_DIR = path.join(__dirname, "data");
 const PRESET_DIR = path.join(DATA_DIR, "presets");
+const TMP_DIR = path.join(__dirname, "tmp");
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRESET_DIR)) fs.mkdirSync(PRESET_DIR);
+if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 
 // ===============================
 // ミドルウェア
@@ -151,9 +153,9 @@ app.get("/listPresets", (req, res) => {
 });
 
 // ===============================
-// プリセットアップロード
+// プリセットアップロード（Render対応）
 // ===============================
-const upload = multer({ dest: "/tmp" });
+const upload = multer({ dest: TMP_DIR });
 
 app.post("/uploadPreset", upload.single("preset"), (req, res) => {
   if (!req.file) return res.status(400).send("No file");
@@ -164,8 +166,11 @@ app.post("/uploadPreset", upload.single("preset"), (req, res) => {
   const newName = req.file.filename + ".png";
   const newPath = path.join(PRESET_DIR, newName);
 
-  fs.rename(req.file.path, newPath, err => {
-    if (err) return res.status(500).send("Save failed");
+  fs.rename(req.file.path, newPath, (err) => {
+    if (err) {
+      console.error("Preset save error:", err);
+      return res.status(500).send("Save failed");
+    }
     res.send("OK");
   });
 });
@@ -258,31 +263,6 @@ function groupComments() {
   });
   return grouped;
 }
-// ===============================
-// ★ プリセットアップロード（Render対応）
-// ===============================
-const TMP_DIR = path.join(__dirname, "tmp");
-if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
-
-const upload = multer({ dest: TMP_DIR });
-
-app.post("/uploadPreset", upload.single("preset"), (req, res) => {
-  if (!req.file) return res.status(400).send("No file");
-
-  const ext = path.extname(req.file.originalname).toLowerCase();
-  if (ext !== ".png") return res.status(400).send("PNG only");
-
-  const newName = req.file.filename + ".png";
-  const newPath = path.join(PRESET_DIR, newName);
-
-  fs.rename(req.file.path, newPath, (err) => {
-    if (err) {
-      console.error("Preset save error:", err);
-      return res.status(500).send("Save failed");
-    }
-    res.send("OK");
-  });
-});
 
 // ===============================
 // サーバー起動
