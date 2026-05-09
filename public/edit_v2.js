@@ -37,6 +37,7 @@ initFoldUI();
 // ====================== Undo / Redo ======================
 let history = [], redoHistory = [];
 
+// ★ ズーム・パンは同期しないように除外
 function getCurrentState() {
     return {
         markers: structuredClone(markers),
@@ -44,7 +45,6 @@ function getCurrentState() {
         texts: structuredClone(texts),
         penPaths: structuredClone(penPaths),
         backgroundImageSrc: backgroundImage ? backgroundImage.src : null,
-        zoom, offsetX, offsetY,
         markerComments: structuredClone(markerComments)
     };
 }
@@ -54,9 +54,6 @@ function restoreState(s) {
     arrows = s.arrows || [];
     texts = s.texts || [];
     penPaths = s.penPaths || [];
-    zoom = s.zoom || 1;
-    offsetX = s.offsetX || 0;
-    offsetY = s.offsetY || 0;
     markerComments = s.markerComments || {};
 
     if (s.backgroundImageSrc) {
@@ -77,7 +74,18 @@ function saveHistory() {
     updateUndoRedoButtons();
 }
 
-function broadcastState() { socket.emit("edit_state", getCurrentState()); }
+// ★ リアルタイム同期用に軽くスロットル
+let lastBroadcastTime = 0;
+function broadcastState() {
+    socket.emit("edit_state", getCurrentState());
+}
+function broadcastStateThrottled() {
+    const now = Date.now();
+    if (now - lastBroadcastTime < 50) return;
+    lastBroadcastTime = now;
+    broadcastState();
+}
+
 socket.on("edit_state", restoreState);
 
 document.getElementById("undoBtn").onclick = () => {
@@ -167,6 +175,7 @@ document.querySelectorAll(".penColorOption").forEach(el => {
         drawCanvas();
     };
 });
+
 // ====================== スライダー ======================
 document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
 document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
@@ -250,6 +259,7 @@ document.addEventListener("keydown", e => {
     if (e.key === "Backspace") {
         typingText = typingText.slice(0, -1);
         drawCanvas();
+        broadcastStateThrottled();
         e.preventDefault();
         return;
     }
@@ -257,6 +267,7 @@ document.addEventListener("keydown", e => {
     if (e.key.length === 1) {
         typingText += e.key;
         drawCanvas();
+        broadcastStateThrottled();
         e.preventDefault();
     }
 });
@@ -410,6 +421,7 @@ function hitTestArrow(x, y) {
         return Math.abs(x - a.x) <= r && Math.abs(y - a.y) <= r;
     }) || null;
 }
+
 // ====================== ペン・ドラッグ・パン・変形 ======================
 let drawing = false;
 
@@ -516,6 +528,7 @@ canvas.addEventListener("mousedown", e => {
             width: currentPenWidth,
             opacity: currentPenOpacity
         });
+        broadcastState(); // 開始時点も共有
         return;
     }
 });
@@ -535,6 +548,7 @@ canvas.addEventListener("mousemove", e => {
             selectedObject.size = Math.max(8, (transformStart.originalSize || selectedObject.size) + d / 2);
         }
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
@@ -543,6 +557,7 @@ canvas.addEventListener("mousemove", e => {
         const cy = transformStart.centerY;
         selectedObject.angle = Math.atan2(y - cy, x - cx);
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
@@ -550,6 +565,7 @@ canvas.addEventListener("mousemove", e => {
         selectedObject.x = transformStart.originalX + (x - transformStart.x);
         selectedObject.y = transformStart.originalY + (y - transformStart.y);
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
@@ -557,6 +573,7 @@ canvas.addEventListener("mousemove", e => {
         draggingMarker.x = x - dragOffsetX;
         draggingMarker.y = y - dragOffsetY;
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
@@ -564,16 +581,18 @@ canvas.addEventListener("mousemove", e => {
         draggingArrow.x = x - dragOffsetX;
         draggingArrow.y = y - dragOffsetY;
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
     if (drawing) {
         penPaths[penPaths.length - 1].points.push({ x, y });
         drawCanvas();
+        broadcastStateThrottled();
         return;
     }
 
-    // ★ 右ドラッグパン
+    // ★ 右ドラッグパン（これは自分だけの表示なので同期しない）
     if (isPanning) {
         offsetX = e.clientX - panStartX;
         offsetY = e.clientY - panStartY;
@@ -609,7 +628,7 @@ document.getElementById("zoomInBtn").onclick = () => {
     zoom += zoomStep;
 
     drawCanvas();
-    broadcastState();
+    // ズームは同期しない
 };
 
 document.getElementById("zoomOutBtn").onclick = () => {
@@ -620,7 +639,6 @@ document.getElementById("zoomOutBtn").onclick = () => {
     zoom = Math.max(0.2, zoom - zoomStep);
 
     drawCanvas();
-    broadcastState();
 };
 
 document.getElementById("zoomResetBtn").onclick = () => {
@@ -631,8 +649,8 @@ document.getElementById("zoomResetBtn").onclick = () => {
     zoom = 1.0;
 
     drawCanvas();
-    broadcastState();
 };
+
 // ====================== PNG書き出し ======================
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
