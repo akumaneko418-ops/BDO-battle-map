@@ -1,5 +1,5 @@
 // ===============================
-// server.js（完全版・リアルタイム同期対応）
+// server.js（完全版・リアルタイム同期統合）
 // ===============================
 
 const express = require("express");
@@ -214,74 +214,17 @@ app.get("/presetImage", (req, res) => {
 });
 
 // ===============================
-// Socket.IO（リアルタイム同期）
+// Socket.IO（edit_state に統合）
 // ===============================
-let markers = [];
-let comments = [];
-
 io.on("connection", socket => {
-  socket.emit("loadMarkers", markers);
-  socket.emit("pastComments", groupComments());
 
-  // ★ 新エディタのリアルタイム同期
+  // ★ 新エディタのリアルタイム同期（全状態を edit_state で扱う）
   socket.on("edit_state", s => {
     console.log("edit_state received");
     socket.broadcast.emit("edit_state", s);
   });
 
-  // ===== 以下は旧仕様のマーカー・コメント同期 =====
-  socket.on("addMarker", m => {
-    m._id = uuidv4();
-    markers.push(m);
-    io.emit("addMarker", m);
-  });
-
-  socket.on("moveMarker", data => {
-    const m = markers.find(x => x._id === data._id);
-    if (m) {
-      m.x = data.x;
-      m.y = data.y;
-      io.emit("moveMarker", data);
-    }
-  });
-
-  socket.on("deleteMarker", id => {
-    markers = markers.filter(m => m._id !== id);
-    comments = comments.filter(c => c.markerId !== id);
-    io.emit("deleteMarker", id);
-  });
-
-  socket.on("chat", c => {
-    c._id = uuidv4();
-    comments.push(c);
-    io.emit("chat", c);
-  });
-
-  socket.on("deleteComment", id => {
-    comments = comments.filter(c => c._id !== id);
-    io.emit("deleteComment", id);
-  });
-
-  socket.on("editComment", data => {
-    const c = comments.find(x => x._id === data.id);
-    if (c) {
-      c.message = data.message;
-      io.emit("editComment", data);
-    }
-  });
 });
-
-// ===============================
-// コメントを markerId ごとにまとめる
-// ===============================
-function groupComments() {
-  const grouped = {};
-  comments.forEach(c => {
-    if (!grouped[c.markerId]) grouped[c.markerId] = [];
-    grouped[c.markerId].push(c);
-  });
-  return grouped;
-}
 
 // ===============================
 // サーバー起動
