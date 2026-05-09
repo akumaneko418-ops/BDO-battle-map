@@ -628,40 +628,63 @@ canvas.addEventListener("mouseup", () => {
 // ====================== UI 連動 ======================
 
 // 砦マーカー
-document.getElementById("markerSizeSlider").oninput = e => {
-    currentSize = Number(e.target.value);
-};
+const markerSizeSlider = document.getElementById("markerSizeSlider");
+if (markerSizeSlider) {
+    markerSizeSlider.oninput = e => {
+        currentSize = Number(e.target.value);
+    };
+}
 
-document.getElementById("markerOpacitySlider").oninput = e => {
-    currentOpacity = Number(e.target.value);
-    document.getElementById("markerOpacityValue").textContent = currentOpacity.toFixed(2);
-};
+const markerOpacitySlider = document.getElementById("markerOpacitySlider");
+if (markerOpacitySlider) {
+    markerOpacitySlider.oninput = e => {
+        currentOpacity = Number(e.target.value);
+        const v = document.getElementById("markerOpacityValue");
+        if (v) v.textContent = currentOpacity.toFixed(2);
+    };
+}
 
 // 矢印
-document.getElementById("arrowSizeSlider").oninput = e => {
-    currentSize = Number(e.target.value);
-};
+const arrowSizeSlider = document.getElementById("arrowSizeSlider");
+if (arrowSizeSlider) {
+    arrowSizeSlider.oninput = e => {
+        currentSize = Number(e.target.value);
+    };
+}
 
-document.getElementById("arrowOpacitySlider").oninput = e => {
-    currentOpacity = Number(e.target.value);
-    document.getElementById("arrowOpacityValue").textContent = currentOpacity.toFixed(2);
-};
+const arrowOpacitySlider = document.getElementById("arrowOpacitySlider");
+if (arrowOpacitySlider) {
+    arrowOpacitySlider.oninput = e => {
+        currentOpacity = Number(e.target.value);
+        const v = document.getElementById("arrowOpacityValue");
+        if (v) v.textContent = currentOpacity.toFixed(2);
+    };
+}
 
 // テキスト
-document.getElementById("textSizeSlider").oninput = e => {
-    currentSize = Number(e.target.value);
-};
+const textSizeSlider = document.getElementById("textSizeSlider");
+if (textSizeSlider) {
+    textSizeSlider.oninput = e => {
+        currentSize = Number(e.target.value);
+    };
+}
 
 // ペン
-document.getElementById("penOpacitySlider").oninput = e => {
-    currentOpacity = Number(e.target.value);
-    document.getElementById("penOpacityValue").textContent = currentOpacity.toFixed(2);
-};
+const penOpacitySlider = document.getElementById("penOpacitySlider");
+if (penOpacitySlider) {
+    penOpacitySlider.oninput = e => {
+        currentOpacity = Number(e.target.value);
+        const v = document.getElementById("penOpacityValue");
+        if (v) v.textContent = currentOpacity.toFixed(2);
+    };
+}
 
-document.getElementById("penWidthSlider").oninput = e => {
-    currentSize = Number(e.target.value);
-};
-
+const penWidthSlider = document.getElementById("penWidthSlider");
+if (penWidthSlider) {
+    penWidthSlider.oninput = e => {
+        currentSize = Number(e.target.value);
+    };
+}
 
 // ====================== 初期描画 ======================
 drawCanvas();
