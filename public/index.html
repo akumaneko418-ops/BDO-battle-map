@@ -16,10 +16,10 @@
 
     <t>みんなで同じ画像をリアルタイム編集して保存できるよ</t><br>
 
-    <!-- 新規作成ボタン（＋追加と統一デザイン） -->
+    <!-- 新規作成 -->
     <button id="newBtn" class="new-create-btn">＋ 新規作成</button>
 
-    <!-- 保存済み画像一覧（カテゴリ折りたたみで表示） -->
+    <!-- 保存済み画像一覧 -->
     <div id="savedList"></div>
 
     <!-- プリセット画像管理 -->
@@ -27,7 +27,12 @@
         <div class="left">
             <span class="fold-icon">▼</span> プリセット画像管理
         </div>
-        <button id="addPresetBtn" class="right-btn">＋追加</button>
+
+        <!-- ★ stopPropagation() を追加してタブ開閉を防止 -->
+        <button id="addPresetBtn" class="right-btn" onclick="event.stopPropagation();">
+            ＋追加
+        </button>
+
         <input type="file" id="presetFileInput" accept="image/png" style="display:none;">
     </div>
 
@@ -35,7 +40,6 @@
 
 </div>
 
-<!-- JS は必ず最後に読み込む -->
 <script src="index.js"></script>
 
 </body>
