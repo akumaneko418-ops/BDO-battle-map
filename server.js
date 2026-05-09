@@ -25,13 +25,29 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRESET_DIR)) fs.mkdirSync(PRESET_DIR);
 
 // ===============================
-// 画像保存
+// 画像保存（タイトル重複チェック + 保存日時追加）
 // ===============================
 app.post("/save", (req, res) => {
   const { title, image, markers, comments, category } = req.body;
 
   if (!title || !image) {
     return res.status(400).json({ error: "title と image は必須です" });
+  }
+
+  // 既存タイトル一覧を取得
+  const existingTitles = fs.readdirSync(DATA_DIR)
+    .filter(f => f.endsWith(".json"))
+    .map(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
+      return d.title;
+    });
+
+  // 重複タイトル処理
+  let finalTitle = title;
+  let counter = 2;
+  while (existingTitles.includes(finalTitle)) {
+    finalTitle = `${title}(${counter})`;
+    counter++;
   }
 
   const id = uuidv4();
@@ -41,14 +57,15 @@ app.post("/save", (req, res) => {
   const pngData = image.replace(/^data:image\/png;base64,/, "");
   fs.writeFileSync(`${fileBase}.png`, pngData, "base64");
 
-  // JSON 保存
+  // JSON 保存（保存日時 savedAt を追加）
   const json = {
     id,
-    title,
+    title: finalTitle,
     category,
     markers,
     comments,
-    imagePath: `${id}.png`
+    imagePath: `${id}.png`,
+    savedAt: Date.now()
   };
   fs.writeFileSync(`${fileBase}.json`, JSON.stringify(json, null, 2));
 
@@ -56,20 +73,23 @@ app.post("/save", (req, res) => {
 });
 
 // ===============================
-// 保存済み画像一覧（タイトルだけ）
+// 保存済み画像一覧（新しい順）
 // ===============================
 app.get("/list", (req, res) => {
   const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
 
-  const list = files.map(f => {
+  let list = files.map(f => {
     const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
-return {
-    id: data.id,
-    title: data.title,
-    category: data.category || "未分類"
-};
-
+    return {
+      id: data.id,
+      title: data.title,
+      category: data.category || "未分類",
+      savedAt: data.savedAt || 0
+    };
   });
+
+  // 新しい順にソート
+  list.sort((a, b) => b.savedAt - a.savedAt);
 
   res.json(list);
 });
@@ -117,6 +137,7 @@ app.get("/download/:id", (req, res) => {
 
   res.download(pngPath, filename);
 });
+
 // ===============================
 // 保存済み画像削除
 // ===============================
@@ -142,19 +163,26 @@ app.get("/listPresets", (req, res) => {
 });
 
 // ===============================
-// ★ プリセット画像アップロード
+// ★ プリセット画像アップロード（Render対応）
 // ===============================
-const upload = multer({ dest: PRESET_DIR });
+const upload = multer({ dest: "/tmp" });
 
 app.post("/uploadPreset", upload.single("preset"), (req, res) => {
   if (!req.file) return res.status(400).send("No file");
 
-  const ext = path.extname(req.file.originalname);
-  const newPath = req.file.path + ext;
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  if (ext !== ".png") return res.status(400).send("PNG only");
 
-  fs.renameSync(req.file.path, newPath);
+  const newName = req.file.filename + ".png";
+  const newPath = path.join(PRESET_DIR, newName);
 
-  res.send("OK");
+  fs.rename(req.file.path, newPath, (err) => {
+    if (err) {
+      console.error("Preset save error:", err);
+      return res.status(500).send("Save failed");
+    }
+    res.send("OK");
+  });
 });
 
 // ===============================
@@ -237,16 +265,4 @@ io.on("connection", (socket) => {
 function groupComments() {
   const grouped = {};
   comments.forEach(c => {
-    if (!grouped[c.markerId]) grouped[c.markerId] = [];
-    grouped[c.markerId].push(c);
-  });
-  return grouped;
-}
-
-// ===============================
-// サーバー起動
-// ===============================
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+    if (!grouped[c.markerId]) grouped
