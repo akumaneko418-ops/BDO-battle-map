@@ -553,7 +553,7 @@ canvas.addEventListener("mousedown", e => {
         broadcastState();
         return;
     }
-});
+}
 canvas.addEventListener("mousemove", e => {
     const { x, y } = getCanvasClickPosition(e);
 
