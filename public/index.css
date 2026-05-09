@@ -138,3 +138,17 @@ body {
     cursor: pointer;
     text-decoration: underline;
 }
+.right-btn {
+    padding: 6px 12px;
+    background: #4da3ff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.right-btn:hover {
+    background: #3b8fe0;
+}
