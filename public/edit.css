@@ -375,3 +375,12 @@ button:hover {
 .contextMenu div:hover {
     background: #eee;
 }
+#undoBtn,
+#redoBtn {
+    font-family: Arial, Helvetica, sans-serif !important;
+    letter-spacing: 0 !important;
+}
+#undoBtn,
+#redoBtn {
+    min-width: 60px !important;
+}
