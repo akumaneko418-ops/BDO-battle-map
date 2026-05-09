@@ -20,7 +20,11 @@ let zoom = 1.0, zoomStep = 0.1;
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
 let backgroundImage = null;
-let offsetX = 0, offsetY = 0, isPanning = false, panStartX = 0, panStartY = 0;
+
+// ★ パン（右ドラッグ）用
+let offsetX = 0, offsetY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
 
 let markers = [], arrows = [], texts = [], penPaths = [];
 let markerComments = {}, highlightedMarkerId = null;
@@ -99,9 +103,9 @@ function updateUndoRedoButtons() {
     document.getElementById("redoBtn").classList.toggle("disabled", !redoHistory.length);
 }
 
-// ====================== ツール解除（グローバル） ======================
+// ====================== ツール解除 ======================
 function clearToolSelection() {
-    if (currentTool === "pen") return; // ★ ペンは解除しない
+    if (currentTool === "pen") return;
     currentTool = "none";
     penMode = false;
     textAddMode = false;
@@ -163,7 +167,147 @@ document.querySelectorAll(".penColorOption").forEach(el => {
         drawCanvas();
     };
 });
+// ====================== スライダー ======================
+document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
+document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
+document.getElementById("markerOpacitySlider").oninput = e => {
+    currentMarkerOpacity = +e.target.value;
+    document.getElementById("markerOpacityValue").textContent = currentMarkerOpacity.toFixed(2);
+};
+document.getElementById("arrowOpacitySlider").oninput = e => {
+    currentArrowOpacity = +e.target.value;
+    document.getElementById("arrowOpacityValue").textContent = currentArrowOpacity.toFixed(2);
+};
+document.getElementById("penOpacitySlider").oninput = e => {
+    currentPenOpacity = +e.target.value;
+    document.getElementById("penOpacityValue").textContent = currentPenOpacity.toFixed(2);
+};
+document.getElementById("textSizeSlider").oninput = e => currentTextSize = +e.target.value;
+document.getElementById("penWidthSlider").oninput = e => currentPenWidth = +e.target.value;
 
+// ====================== 座標変換 ======================
+function getCanvasClickPosition(e) {
+    const rect = canvas.getBoundingClientRect();
+    const rawX = e.clientX - rect.left - offsetX;
+    const rawY = e.clientY - rect.top - offsetY;
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    return { x: (rawX - cx) / zoom + cx, y: (rawY - cy) / zoom + cy };
+}
+
+// ====================== テキスト入力 ======================
+let typing = false, typingText = "", typingX = 0, typingY = 0;
+
+function cancelTyping() {
+    if (typing) { typing = false; typingText = ""; drawCanvas(); }
+}
+
+document.addEventListener("keydown", e => {
+    if (!typing) return;
+    if (e.key === "Enter") {
+        if (typingText.trim()) {
+            saveHistory();
+            texts.push({
+                id: "text_" + Date.now(),
+                x: typingX, y: typingY,
+                text: typingText,
+                color: currentTextColor,
+                size: currentTextSize,
+                angle: 0
+            });
+            broadcastState();
+        }
+        typing = false; typingText = ""; drawCanvas(); e.preventDefault(); return;
+    }
+    if (e.key === "Escape") { typing = false; typingText = ""; drawCanvas(); e.preventDefault(); return; }
+    if (e.key === "Backspace") { typingText = typingText.slice(0, -1); drawCanvas(); e.preventDefault(); return; }
+    if (e.key.length === 1) { typingText += e.key; drawCanvas(); e.preventDefault(); }
+});
+
+// ====================== バウンディングボックス ======================
+function getBoundingBox(obj, type) {
+    if (type === "arrow") {
+        const s = 25 * (obj.scale || 1);
+        return { x: obj.x - s, y: obj.y - s, w: s * 2, h: s * 2 };
+    }
+    if (type === "text") {
+        ctx.save();
+        ctx.font = `700 ${obj.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
+        const w = ctx.measureText(obj.text).width;
+        ctx.restore();
+        return { x: obj.x, y: obj.y - obj.size, w, h: obj.size };
+    }
+    return { x: 0, y: 0, w: 0, h: 0 };
+}
+
+function drawTransformHandles(obj, type) {
+    const b = getBoundingBox(obj, type);
+    ctx.save();
+    ctx.strokeStyle = "#4da3ff"; ctx.lineWidth = 2;
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
+
+    const size = 8;
+    [[b.x,b.y],[b.x+b.w,b.y],[b.x,b.y+b.h],[b.x+b.w,b.y+b.h]].forEach(([hx,hy])=>{
+        ctx.fillStyle="#4da3ff"; ctx.fillRect(hx-size/2,hy-size/2,size,size);
+    });
+
+    const rx = b.x + b.w/2, ry = b.y - 20;
+    ctx.beginPath(); ctx.arc(rx, ry, 6, 0, Math.PI*2); ctx.fillStyle="#4da3ff"; ctx.fill();
+    ctx.restore();
+}
+
+function hitScaleHandle(px,py,b){
+    const s=10;
+    return [[b.x,b.y],[b.x+b.w,b.y],[b.x,b.y+b.h],[b.x+b.w,b.y+b.h]]
+        .some(([hx,hy])=>Math.abs(px-hx)<=s && Math.abs(py-hy)<=s);
+}
+
+function hitRotateHandle(px,py,b){
+    const rx=b.x+b.w/2, ry=b.y-20;
+    return (px-rx)**2 + (py-ry)**2 <= 100;
+}
+
+// ====================== クリック処理 ======================
+canvas.addEventListener("click", e => {
+    const {x,y}=getCanvasClickPosition(e);
+
+    if (currentTool==="text") {
+        typing=true; typingText=""; typingX=x; typingY=y;
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); return;
+    }
+
+    const hitArrow = hitTestArrow(x,y);
+    const hitText = texts.find(t=>{
+        const b=getBoundingBox(t,"text");
+        return x>=b.x && x<=b.x+b.w && y>=b.y && y<=b.y+b.h;
+    });
+
+    if (hitArrow){ selectedObject=hitArrow; selectedType="arrow"; drawCanvas(); return; }
+    if (hitText){ selectedObject=hitText; selectedType="text"; drawCanvas(); return; }
+
+    if (currentTool==="marker"){
+        saveHistory();
+        markers.push({
+            id:"marker_"+Date.now(), x,y,
+            name:document.getElementById("markerName").value,
+            color:currentMarkerColor, opacity:currentMarkerOpacity, size:currentMarkerSize
+        });
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); updateCommentList(); return;
+    }
+
+    if (currentTool==="arrow"){
+        saveHistory();
+        arrows.push({
+            id:"arrow_"+Date.now(), x,y,
+            angle:0, scale:currentArrowScale,
+            color:currentArrowColor, opacity:currentArrowOpacity
+        });
+        selectedObject=null; selectedType=null;
+        drawCanvas(); broadcastState(); return;
+    }
+
+    selectedObject=null; selectedType=null; drawCanvas
 // ====================== スライダー ======================
 document.getElementById("markerSizeSlider").oninput = e => currentMarkerSize = +e.target.value;
 document.getElementById("arrowSizeSlider").oninput = e => currentArrowScale = +e.target.value;
@@ -306,6 +450,7 @@ canvas.addEventListener("click", e => {
 
     selectedObject=null; selectedType=null; drawCanvas();
 });
+
 // ====================== ヒットテスト ======================
 let draggingMarker=null, draggingArrow=null, dragOffsetX=0, dragOffsetY=0;
 
@@ -323,12 +468,19 @@ function hitTestArrow(x,y){
         return Math.abs(x-a.x)<=r && Math.abs(y-a.y)<=r;
     })||null;
 }
-
 // ====================== ペン・ドラッグ・パン・変形 ======================
 let drawing = false;
 
 canvas.addEventListener("mousedown", e => {
     const {x,y}=getCanvasClickPosition(e);
+
+    // ★ 右クリックでパン開始
+    if (e.button === 2) {
+        isPanning = true;
+        panStartX = e.clientX - offsetX;
+        panStartY = e.clientY - offsetY;
+        return;
+    }
 
     const clearTool = () => clearToolSelection();
 
@@ -417,14 +569,6 @@ canvas.addEventListener("mousedown", e => {
         });
         return;
     }
-
-    if (currentTool==="pan") {
-        clearTool();
-        isPanning=true;
-        panStartX=e.clientX-offsetX;
-        panStartY=e.clientY-offsetY;
-        return;
-    }
 });
 
 canvas.addEventListener("mousemove", e => {
@@ -472,18 +616,25 @@ canvas.addEventListener("mousemove", e => {
         drawCanvas(); return;
     }
 
+    // ★ 右ドラッグパン
     if (isPanning) {
-        offsetX=e.clientX-panStartX;
-        offsetY=e.clientY-panStartY;
+        offsetX = e.clientX - panStartX;
+        offsetY = e.clientY - panStartY;
         drawCanvas();
     }
 });
 
 canvas.addEventListener("mouseup", () => {
     const changed = drawing || draggingMarker || draggingArrow || transformMode;
-    drawing=false; isPanning=false;
-    draggingMarker=null; draggingArrow=null;
-    transformMode=null; transformStart=null;
+
+    drawing=false;
+    draggingMarker=null;
+    draggingArrow=null;
+    transformMode=null;
+    transformStart=null;
+
+    // ★ 右ドラッグパン終了
+    isPanning = false;
 
     if (changed) {
         drawCanvas(); broadcastState(); updateCommentList();
@@ -496,7 +647,6 @@ document.getElementById("zoomInBtn").onclick = () => {
     selectedObject = null;
     selectedType = null;
 
-    // ★ saveHistory() を削除
     zoom += zoomStep;
 
     drawCanvas();
@@ -508,7 +658,6 @@ document.getElementById("zoomOutBtn").onclick = () => {
     selectedObject = null;
     selectedType = null;
 
-    // ★ saveHistory() を削除
     zoom = Math.max(0.2, zoom - zoomStep);
 
     drawCanvas();
@@ -520,14 +669,11 @@ document.getElementById("zoomResetBtn").onclick = () => {
     selectedObject = null;
     selectedType = null;
 
-    // ★ saveHistory() を削除
     zoom = 1.0;
 
     drawCanvas();
     broadcastState();
 };
-
-
 // ====================== PNG書き出し ======================
 document.getElementById("exportPngBtn").onclick = () => {
     cancelTyping();
@@ -543,10 +689,12 @@ document.getElementById("exportPngBtn").onclick = () => {
     a.click();
 };
 
-  // ====================== 描画処理 ======================
+// ====================== 描画処理 ======================
 function drawCanvas() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.save();
+
+    // ★ パン（右ドラッグ）とズーム
     ctx.translate(offsetX,offsetY);
     ctx.translate(canvas.width/2,canvas.height/2);
     ctx.scale(zoom,zoom);
@@ -781,26 +929,16 @@ document.getElementById("saveAllBtn").onclick = async () => {
 
     currentTitle = title;
 
-    const image = canvas.toDataURL("image/png");
-
-    const payload = {
-        title,
-        image,
-        markers,
-        comments: markerComments
-    };
-
     const res = await fetch("/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-    title: currentTitle,
-    category: document.getElementById("categorySelect").value, // ★ 追加
-    image: canvas.toDataURL(),
-    markers,
-    comments:markerComments
-})
-
+            title: currentTitle,
+            category: document.getElementById("categorySelect").value,
+            image: canvas.toDataURL(),
+            markers,
+            comments: markerComments
+        })
     });
 
     const json = await res.json();
@@ -813,7 +951,7 @@ document.getElementById("saveAllBtn").onclick = async () => {
     }
 };
 
-// ====================== ★ 保存データロード（id=◯◯） ======================
+// ====================== 保存データロード ======================
 async function loadDataIfNeeded() {
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
@@ -843,7 +981,7 @@ async function loadDataIfNeeded() {
     drawCanvas();
 }
 
-// ====================== ★ プリセットロード（preset=◯◯） ======================
+// ====================== プリセットロード ======================
 async function loadPresetIfNeeded() {
     const params = new URLSearchParams(location.search);
     const preset = params.get("preset");
@@ -858,7 +996,7 @@ async function loadPresetIfNeeded() {
         canvas.width = img.width;
         canvas.height = img.height;
         backgroundImage = img;
-         document.getElementById("dropHint").style.display = "none";
+        document.getElementById("dropHint").style.display = "none";
         drawCanvas();
     };
     img.src = url;
@@ -873,3 +1011,5 @@ drawCanvas();
 updateCommentList();
 loadDataIfNeeded();
 loadPresetIfNeeded();
+
+                    
