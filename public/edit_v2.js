@@ -524,21 +524,20 @@ canvas.addEventListener("mousedown", e => {
         }
     }
 
-    if (currentTool === "arrow") {
-        const hit = hitTest
-            if (currentTool === "arrow") {
-        const hit = hitTestArrow(x, y);
-        if (hit) {
-            clearTool();
-            saveHistory();
-            draggingArrow = hit;
-            dragOffsetX = x - hit.x;
-            dragOffsetY = y - hit.y;
-            selectedObject = hit;
-            selectedType = "arrow";
-            return;
-        }
+if (currentTool === "arrow") {
+    const hit = hitTestArrow(x, y);
+    if (hit) {
+        clearTool();
+        saveHistory();
+        draggingArrow = hit;
+        dragOffsetX = x - hit.x;
+        dragOffsetY = y - hit.y;
+        selectedObject = hit;
+        selectedType = "arrow";
+        return;
     }
+}
+
 
     if (currentTool === "pen") {
         clearTool();
@@ -554,6 +553,7 @@ canvas.addEventListener("mousedown", e => {
         return;
     }
 }
+                        
 canvas.addEventListener("mousemove", e => {
     const { x, y } = getCanvasClickPosition(e);
 
