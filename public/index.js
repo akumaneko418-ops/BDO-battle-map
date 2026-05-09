@@ -51,19 +51,17 @@ async function deleteImage(id) {
 }
 
 // ===============================
-// 保存済み画像一覧（新しい順 + カテゴリ折りたたみ）
+// 保存済み画像一覧
 // ===============================
 async function loadSavedImages() {
     const res = await fetch("/list");
     let files = await res.json();
 
-    // ★ 新しい順にソート
     files.sort((a, b) => b.savedAt - a.savedAt);
 
     const container = document.getElementById("savedList");
     container.innerHTML = "";
 
-    // カテゴリごとにグループ化
     const groups = {};
     files.forEach(f => {
         if (!groups[f.category]) groups[f.category] = [];
@@ -146,6 +144,29 @@ async function deletePreset(name) {
     });
     loadPresets();
 }
+
+// ===============================
+// プリセットアップロード（ブラウザ側）
+// ===============================
+document.getElementById("addPresetBtn").onclick = (e) => {
+    e.stopPropagation(); // ★ fold-header の開閉を防止
+    document.getElementById("presetFileInput").click();
+};
+
+document.getElementById("presetFileInput").onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const form = new FormData();
+    form.append("preset", file);
+
+    await fetch("/uploadPreset", {
+        method: "POST",
+        body: form
+    });
+
+    loadPresets();
+};
 
 // ===============================
 // 初期ロード
