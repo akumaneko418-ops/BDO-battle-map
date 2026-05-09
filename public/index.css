@@ -152,3 +152,7 @@ body {
 .right-btn:hover {
     background: #3b8fe0;
 }
+t {
+    display: block;
+    margin-bottom: 12px; /* 好きな値に調整してOK */
+}
