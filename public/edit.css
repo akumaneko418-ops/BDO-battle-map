@@ -47,20 +47,18 @@ body {
     box-sizing: border-box;
 }
 
-/* ★ 修正：fileNameArea が横幅を取りすぎて undo/redo を潰していた */
 .fileNameArea {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 0 0 auto; /* ← 必要な幅だけ取る */
+    flex: 0 0 auto;
 }
 
-/* ★ 新規追加：右側ボタン群を flex で独立させる */
 .toolbar-buttons {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 0 0 auto; /* ← 潰れない */
+    flex: 0 0 auto;
 }
 
 .categorySelect {
@@ -81,12 +79,10 @@ body {
     min-width: 0;
 }
 
-/* PNG出力・保存ボタンを右寄せ */
 #exportPngBtn {
     margin-left: auto !important;
 }
 
-/* ツールバー内のボタン */
 .canvas-toolbar button {
     height: 34px !important;
     padding: 0 12px !important;
@@ -98,20 +94,18 @@ body {
     font-size: 14px;
 }
 
-/* 全て保存ボタン */
 .saveButton {
     background: #007bff;
     color: #fff;
 }
 
-/* ズームボタン */
 #zoomInBtn,
 #zoomOutBtn {
     font-size: 18px !important;
 }
 
 /* ============================================================
-   戻る / 進む ボタンの縦書きバグ修正（必須）
+   戻る / 進む ボタンの縦書きバグ修正
 ============================================================ */
 #undoBtn,
 #redoBtn {
@@ -121,9 +115,14 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-family: Arial, Helvetica, sans-serif !important;
+    letter-spacing: 0 !important;
 
-    /* ★ 追加：潰れ防止 */
-    min-width: 48px;
+    /* 潰れ防止 */
+    min-width: 60px !important;
+    width: 70px !important;
+    flex: 0 0 70px !important;
+    text-align: center;
 }
 
 /* ============================================================
@@ -352,41 +351,26 @@ button:hover {
 }
 
 /* ============================================================
-   右クリックメニュー
+   ★ 新仕様：右クリックメニュー（context-menu）
 ============================================================ */
-.contextMenu {
-    position: fixed;
-    background: #fff;
-    border: 1px solid #aaa;
+.context-menu {
+    position: absolute;
+    background: #222;
+    color: #fff;
+    padding: 6px 0;
     border-radius: 6px;
-    padding: 4px 0;
-    z-index: 9999;
-}
-
-.contextMenu.hidden {
     display: none;
+    z-index: 9999;
+    width: 140px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
-.contextMenu div {
-    padding: 8px 16px;
+.context-menu div {
+    padding: 8px 12px;
     cursor: pointer;
+    font-size: 14px;
 }
 
-.contextMenu div:hover {
-    background: #eee;
-}
-#undoBtn,
-#redoBtn {
-    font-family: Arial, Helvetica, sans-serif !important;
-    letter-spacing: 0 !important;
-}
-#undoBtn,
-#redoBtn {
-    min-width: 60px !important;
-}
-#undoBtn,
-#redoBtn {
-    width: 70px !important;   /* ← 強制的に横幅を確保 */
-    flex: 0 0 70px !important; /* ← flex に潰されないように固定 */
-    text-align: center;
+.context-menu div:hover {
+    background: #444;
 }
