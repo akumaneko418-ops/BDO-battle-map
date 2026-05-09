@@ -1170,7 +1170,7 @@ async function loadPresetIfNeeded() {
     const preset = params.get("preset");
     if (!preset) return;
 
-    const res = await fetch(`/presetImage?name=${preset}`);
+   const res = await fetch(`/presetImage?name=${encodeURIComponent(preset)}`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
 
