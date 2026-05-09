@@ -29,11 +29,11 @@ body {
 }
 
 /* ===============================
-   説明文の余白
+   説明文の余白（統一）
 =============================== */
 t {
     display: block;
-    margin-bottom: 12px; /* ← 自然に見える最適値 */
+    margin-bottom: 12px;
 }
 
 /* ===============================
@@ -48,8 +48,8 @@ t {
     cursor: pointer;
     font-size: 18px;
     font-weight: 700;
-    margin-top: 10px;
-    margin-bottom: 16px; /* ← 見出しとの距離が自然に見える値 */
+    margin-top: 12px;
+    margin-bottom: 12px; /* ← 統一 */
     display: inline-block;
 }
 
@@ -63,7 +63,7 @@ t {
 .fold-header {
     font-weight: bold;
     cursor: pointer;
-    margin-top: 20px; /* ← 見出しの存在感に合わせた余白 */
+    margin-top: 12px; /* ← 統一 */
     padding: 10px;
     background: #f0f0f0;
     border-radius: 6px;
