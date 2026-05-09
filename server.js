@@ -1,5 +1,5 @@
 // ===============================
-// server.js（保存・読み込み・一覧・DL・プリセット管理 完全版）
+// server.js（完全版）
 // ===============================
 
 const express = require("express");
@@ -7,16 +7,17 @@ const fs = require("fs");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const multer = require("multer");
+const http = require("http");
+const socketIO = require("socket.io");
 
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const server = http.createServer(app);
+const io = socketIO(server);
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.static("public"));
+const PORT = process.env.PORT || 3000;
 
 // ===============================
-// データ保存フォルダ
+// ディレクトリ
 // ===============================
 const DATA_DIR = path.join(__dirname, "data");
 const PRESET_DIR = path.join(DATA_DIR, "presets");
@@ -25,7 +26,13 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PRESET_DIR)) fs.mkdirSync(PRESET_DIR);
 
 // ===============================
-// 画像保存（タイトル重複チェック + 保存日時追加）
+// ミドルウェア
+// ===============================
+app.use(express.json({ limit: "50mb" }));
+app.use(express.static("public"));
+
+// ===============================
+// 保存処理（PNG + JSON）
 // ===============================
 app.post("/save", (req, res) => {
   const { title, image, markers, comments, category } = req.body;
@@ -34,68 +41,51 @@ app.post("/save", (req, res) => {
     return res.status(400).json({ error: "title と image は必須です" });
   }
 
-  // 既存タイトル一覧を取得
-  const existingTitles = fs.readdirSync(DATA_DIR)
-    .filter(f => f.endsWith(".json"))
-    .map(f => {
-      const d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
-      return d.title;
-    });
-
-  // 重複タイトル処理
-  let finalTitle = title;
-  let counter = 2;
-  while (existingTitles.includes(finalTitle)) {
-    finalTitle = `${title}(${counter})`;
-    counter++;
-  }
-
   const id = uuidv4();
-  const fileBase = path.join(DATA_DIR, id);
+  const base = path.join(DATA_DIR, id);
 
   // PNG 保存
   const pngData = image.replace(/^data:image\/png;base64,/, "");
-  fs.writeFileSync(`${fileBase}.png`, pngData, "base64");
+  fs.writeFileSync(`${base}.png`, pngData, "base64");
 
-  // JSON 保存（保存日時 savedAt を追加）
+  // JSON 保存
   const json = {
     id,
-    title: finalTitle,
+    title,
     category,
     markers,
     comments,
     imagePath: `${id}.png`,
     savedAt: Date.now()
   };
-  fs.writeFileSync(`${fileBase}.json`, JSON.stringify(json, null, 2));
+  fs.writeFileSync(`${base}.json`, JSON.stringify(json, null, 2));
 
   res.json({ success: true, id });
 });
 
 // ===============================
-// 保存済み画像一覧（新しい順）
+// 一覧
 // ===============================
 app.get("/list", (req, res) => {
   const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith(".json"));
 
-  let list = files.map(f => {
-    const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
+  const list = files.map(f => {
+    const d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f)));
     return {
-      id: data.id,
-      title: data.title,
-      category: data.category || "未分類",
-      savedAt: data.savedAt || 0
+      id: d.id,
+      title: d.title,
+      category: d.category || "未分類",
+      savedAt: d.savedAt || 0
     };
   });
 
-  // 新しい順にソート
   list.sort((a, b) => b.savedAt - a.savedAt);
 
   res.json(list);
 });
 
 // ===============================
-// 再編集用ロード
+// 再編集ロード
 // ===============================
 app.get("/load", (req, res) => {
   const id = req.query.id;
@@ -120,7 +110,7 @@ app.get("/load", (req, res) => {
 });
 
 // ===============================
-// ダウンロード（タイトル.png）
+// ダウンロード
 // ===============================
 app.get("/download/:id", (req, res) => {
   const id = req.params.id;
@@ -133,13 +123,11 @@ app.get("/download/:id", (req, res) => {
   }
 
   const data = JSON.parse(fs.readFileSync(jsonPath));
-  const filename = `${data.title}.png`;
-
-  res.download(pngPath, filename);
+  res.download(pngPath, `${data.title}.png`);
 });
 
 // ===============================
-// 保存済み画像削除
+// 削除
 // ===============================
 app.post("/delete", (req, res) => {
   const id = req.body.id;
@@ -155,7 +143,7 @@ app.post("/delete", (req, res) => {
 });
 
 // ===============================
-// ★ プリセット画像一覧
+// プリセット一覧
 // ===============================
 app.get("/listPresets", (req, res) => {
   const files = fs.readdirSync(PRESET_DIR).filter(f => f.endsWith(".png"));
@@ -163,7 +151,7 @@ app.get("/listPresets", (req, res) => {
 });
 
 // ===============================
-// ★ プリセット画像アップロード（Render対応）
+// プリセットアップロード
 // ===============================
 const upload = multer({ dest: "/tmp" });
 
@@ -176,17 +164,14 @@ app.post("/uploadPreset", upload.single("preset"), (req, res) => {
   const newName = req.file.filename + ".png";
   const newPath = path.join(PRESET_DIR, newName);
 
-  fs.rename(req.file.path, newPath, (err) => {
-    if (err) {
-      console.error("Preset save error:", err);
-      return res.status(500).send("Save failed");
-    }
+  fs.rename(req.file.path, newPath, err => {
+    if (err) return res.status(500).send("Save failed");
     res.send("OK");
   });
 });
 
 // ===============================
-// ★ プリセット画像削除
+// プリセット削除
 // ===============================
 app.post("/deletePreset", (req, res) => {
   const name = req.body.name;
@@ -199,7 +184,7 @@ app.post("/deletePreset", (req, res) => {
 });
 
 // ===============================
-// ★ プリセット画像取得
+// プリセット取得
 // ===============================
 app.get("/presetImage", (req, res) => {
   const name = req.query.name;
@@ -212,22 +197,22 @@ app.get("/presetImage", (req, res) => {
 });
 
 // ===============================
-// Socket.IO（マーカー & コメント）
+// Socket.IO
 // ===============================
 let markers = [];
 let comments = [];
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   socket.emit("loadMarkers", markers);
   socket.emit("pastComments", groupComments());
 
-  socket.on("addMarker", (m) => {
+  socket.on("addMarker", m => {
     m._id = uuidv4();
     markers.push(m);
     io.emit("addMarker", m);
   });
 
-  socket.on("moveMarker", (data) => {
+  socket.on("moveMarker", data => {
     const m = markers.find(x => x._id === data._id);
     if (m) {
       m.x = data.x;
@@ -236,24 +221,24 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("deleteMarker", (id) => {
+  socket.on("deleteMarker", id => {
     markers = markers.filter(m => m._id !== id);
     comments = comments.filter(c => c.markerId !== id);
     io.emit("deleteMarker", id);
   });
 
-  socket.on("chat", (c) => {
+  socket.on("chat", c => {
     c._id = uuidv4();
     comments.push(c);
     io.emit("chat", c);
   });
 
-  socket.on("deleteComment", (id) => {
+  socket.on("deleteComment", id => {
     comments = comments.filter(c => c._id !== id);
     io.emit("deleteComment", id);
   });
 
-  socket.on("editComment", (data) => {
+  socket.on("editComment", data => {
     const c = comments.find(x => x._id === data.id);
     if (c) {
       c.message = data.message;
@@ -262,10 +247,9 @@ io.on("connection", (socket) => {
   });
 });
 
-function groupComments() {
-  const grouped = {};
-  comments.forEach(c => {
-    if (!grouped[c.markerId]) grouped
+// ===============================
+// コメントを markerId ごとにまとめる
+// ===============================
 function groupComments() {
   const grouped = {};
   comments.forEach(c => {
@@ -274,44 +258,6 @@ function groupComments() {
   });
   return grouped;
 }
-
-// ===============================
-// 保存データ読み込み
-// ===============================
-app.get("/load", (req, res) => {
-  const id = req.query.id;
-  if (!id) return res.status(400).send("No id");
-
-  const filePath = path.join(DATA_DIR, id + ".json");
-  if (!fs.existsSync(filePath)) return res.status(404).send("Not found");
-
-  const json = fs.readFileSync(filePath, "utf8");
-  res.json(JSON.parse(json));
-});
-
-// ===============================
-// 保存処理
-// ===============================
-app.post("/save", (req, res) => {
-  const { title, category, image, markers, comments } = req.body;
-
-  if (!title) return res.json({ success: false });
-
-  const filePath = path.join(DATA_DIR, title + ".json");
-
-  const data = {
-    title,
-    category,
-    image,
-    markers,
-    comments
-  };
-
-  fs.writeFile(filePath, JSON.stringify(data, null, 2), err => {
-    if (err) return res.json({ success: false });
-    res.json({ success: true });
-  });
-});
 
 // ===============================
 // サーバー起動
