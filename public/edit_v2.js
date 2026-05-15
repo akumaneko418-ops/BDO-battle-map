@@ -129,6 +129,11 @@ let currentArrowColor = "#ff7eb9", currentArrowOpacity = 1.0, currentArrowScale 
 let currentTextColor = "#ff7eb9", currentTextSize = 16;
 let penMode = false, currentPenColor = "#ff7eb9", currentPenWidth = 3, currentPenOpacity = 1.0;
 let textAddMode = false;
+function clearToolSelection() {
+    document.querySelectorAll(".tool-button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+}
 
 document.getElementById("penClearBtn").onclick = () => {
     cancelTyping(); saveHistory(); penPaths = []; drawCanvas(); broadcastState();
