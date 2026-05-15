@@ -52,7 +52,6 @@ function getCurrentState() {
         offsetX,
         offsetY,
         markerComments
-        // backgroundImage は保存しない（Undo で消えないように）
     };
 }
 
@@ -230,13 +229,11 @@ function cancelTyping() {
     drawCanvas();
 }
 
-/* input → typingText に反映 */
 hiddenInput.addEventListener("input", () => {
     typingText = hiddenInput.value;
     drawCanvas();
 });
 
-/* Enter で確定 */
 hiddenInput.addEventListener("keydown", e => {
     if (e.key === "Enter") {
         e.preventDefault();
@@ -279,8 +276,6 @@ canvas.addEventListener("click", e => {
         drawCanvas();
         return;
     }
-
-    /* --- 以下は元のオブジェクト選択処理 --- */
 
     const hitArrow = hitTestArrow(x, y);
     const hitText = texts.find(t => {
@@ -349,7 +344,6 @@ canvas.addEventListener("click", e => {
     selectedType = null;
     drawCanvas();
 });
-
 /* ============================================================
    ヒットテスト
 ============================================================ */
@@ -591,11 +585,7 @@ canvas.addEventListener("mouseup", () => {
 });
 
 /* ============================================================
-   ズーム
-============================================================ */
-document.getElementById("zoomInBtn").onclick = () => {
-/* ============================================================
-   ズーム
+   ズーム（※重複バグ修正済み）
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
     cancelTyping();
@@ -768,7 +758,6 @@ function drawCanvas() {
 
     ctx.restore();
 }
-
 /* ============================================================
    ドロップ処理
 ============================================================ */
