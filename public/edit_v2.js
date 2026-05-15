@@ -223,10 +223,11 @@ function getCanvasClickPosition(e) {
 }
 
 /* ============================================================
-   テキスト入力
+   テキスト入力（IME完全対応版）
 ============================================================ */
 let typing = false, typingText = "", typingX = 0, typingY = 0;
 
+/* 入力キャンセル */
 function cancelTyping() {
     if (typing) {
         typing = false;
@@ -234,69 +235,33 @@ function cancelTyping() {
         drawCanvas();
     }
 }
+
+/* IME 状態管理 */
 let composing = false;
 
+/* IME開始 */
 document.addEventListener("compositionstart", () => {
     composing = true;
 });
 
+/* IME確定（日本語・絵文字など） */
 document.addEventListener("compositionend", (e) => {
     composing = false;
     if (typing) {
-        typingText += e.data;
+        typingText += e.data;   // ← 確定文字を追加
         drawCanvas();
         broadcastStateThrottled();
     }
 });
 
+/* キー入力 */
 document.addEventListener("keydown", e => {
-    if (composing) return;
     if (!typing) return;
 
-    if (e.key === "Enter") {
-        if (typingText.trim()) {
-            saveHistory();
-            texts.push({
-                id: "text_" + Date.now(),
-                x: typingX,
-                y: typingY,
-                text: typingText,
-                color: currentTextColor,
-                size: currentTextSize,
-                angle: 0
-            });
-            broadcastState();
-        }
-        typing = false;
-        typingText = "";
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
+    /* ★ IME変換中は keydown を無視（Backspace暴発防止） */
+    if (composing) return;
 
-    if (e.key === "Escape") {
-        typing = false;
-        typingText = "";
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key === "Backspace") {
-        typingText = typingText.slice(0, -1);
-        drawCanvas();
-        broadcastStateThrottled();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key.length === 1) {
-        typingText += e.key;
-        drawCanvas();
-        broadcastStateThrottled();
-        e.preventDefault();
-    }
-});
+    /* Enter → 確定 */
 
 
 /* ============================================================
