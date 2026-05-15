@@ -38,7 +38,7 @@ let transformMode = null, transformStart = null;
 initFoldUI();
 
 /* ============================================================
-   Undo / Redo
+   Undo / Redo（ズーム・パンは対象外）
 ============================================================ */
 let history = [], redoHistory = [];
 
@@ -48,9 +48,6 @@ function getCurrentState() {
         arrows,
         texts,
         penPaths,
-        zoom,
-        offsetX,
-        offsetY,
         markerComments
     };
 }
@@ -61,9 +58,6 @@ function restoreState(s) {
     texts = s.texts || [];
     penPaths = s.penPaths || [];
     markerComments = s.markerComments || {};
-    zoom = s.zoom || 1.0;
-    offsetX = s.offsetX || 0;
-    offsetY = s.offsetY || 0;
 
     drawCanvas();
     updateCommentList();
@@ -367,13 +361,14 @@ function hitTestArrow(x, y) {
 }
 
 /* ============================================================
-   mousedown（修正版）
+   mousedown（右クリック＝ビュー移動）
 ============================================================ */
 let drawing = false;
 
 canvas.addEventListener("mousedown", e => {
     const { x, y } = getCanvasClickPosition(e);
 
+    // 右クリック → キャンバス全体の表示位置を移動
     if (e.button === 2) {
         isPanning = true;
         panStartX = e.clientX - offsetX;
@@ -491,7 +486,7 @@ canvas.addEventListener("mousedown", e => {
 });
 
 /* ============================================================
-   mousemove
+   mousemove（ビュー移動）
 ============================================================ */
 canvas.addEventListener("mousemove", e => {
     const { x, y } = getCanvasClickPosition(e);
@@ -556,6 +551,7 @@ canvas.addEventListener("mousemove", e => {
         return;
     }
 
+    // 右クリックドラッグ → 表示エリア（ビュー）移動
     if (isPanning) {
         offsetX = e.clientX - panStartX;
         offsetY = e.clientY - panStartY;
@@ -583,37 +579,6 @@ canvas.addEventListener("mouseup", () => {
         updateCommentList();
     }
 });
-
-/* ============================================================
-   ズーム（※重複バグ修正済み）
-============================================================ */
-document.getElementById("zoomInBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-
-    zoom += zoomStep;
-    drawCanvas();
-};
-
-document.getElementById("zoomOutBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-
-    zoom = Math.max(0.2, zoom - zoomStep);
-    drawCanvas();
-};
-
-document.getElementById("zoomResetBtn").onclick = () => {
-    cancelTyping();
-    selectedObject = null;
-    selectedType = null;
-
-    zoom = 1.0;
-    drawCanvas();
-};
-
 /* ============================================================
    PNG書き出し
 ============================================================ */
@@ -631,13 +596,16 @@ document.getElementById("exportPngBtn").onclick = () => {
 };
 
 /* ============================================================
-   描画処理
+   描画処理（ビュー移動対応）
 ============================================================ */
 function drawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
 
+    // ★ビュー移動（表示エリア移動）
     ctx.translate(offsetX, offsetY);
+
+    // ★ズーム中心をキャンバス中央に
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
     ctx.translate(-canvas.width / 2, -canvas.height / 2);
@@ -658,18 +626,22 @@ function drawCanvas() {
         ctx.restore();
     });
 
-    /* マーカー */
+    /* マーカー（名前を中心に配置） */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
+
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.size || 10, 0, Math.PI * 2);
         ctx.fillStyle = m.color;
         ctx.fill();
 
-        ctx.fillStyle = "#000";
+        ctx.fillStyle = "#fff";
         ctx.font = `700 14px "Noto Sans JP","Yu Gothic",sans-serif`;
-        ctx.fillText(m.name, m.x + (m.size || 10) + 4, m.y + 4);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(m.name, m.x, m.y);
+
         ctx.restore();
     });
 
@@ -758,6 +730,7 @@ function drawCanvas() {
 
     ctx.restore();
 }
+
 /* ============================================================
    ドロップ処理
 ============================================================ */
@@ -835,7 +808,7 @@ function showMenu(id, x, y) {
 }
 
 /* ============================================================
-   メニュー操作
+   メニュー操作（コメント削除対応）
 ============================================================ */
 document.getElementById("deleteMarkerBtn").onclick = () => {
     if (!window.selectedMarker) return;
@@ -897,6 +870,9 @@ document.getElementById("addCommentBtn").onclick = () => {
     hideAllMenus();
 };
 
+/* ============================================================
+   コメント一覧（削除ボタン付き）
+============================================================ */
 function updateCommentList() {
     const list = document.getElementById("commentList");
     if (!list) return;
@@ -907,7 +883,7 @@ function updateCommentList() {
         const cs = markerComments[m.id];
         if (!cs) return;
 
-        cs.forEach(c => {
+        cs.forEach((c, index) => {
             const div = document.createElement("div");
             div.className = "commentItem";
 
@@ -918,6 +894,18 @@ function updateCommentList() {
 
             const text = document.createElement("span");
             text.textContent = "：" + c;
+
+            // ★ コメント削除ボタン
+            const del = document.createElement("button");
+            del.textContent = "×";
+            del.className = "commentDeleteBtn";
+            del.onclick = () => {
+                saveHistory();
+                markerComments[m.id].splice(index, 1);
+                if (markerComments[m.id].length === 0) delete markerComments[m.id];
+                updateCommentList();
+                broadcastState();
+            };
 
             name.onmouseenter = () => {
                 highlightedMarkerId = m.id;
@@ -930,6 +918,7 @@ function updateCommentList() {
 
             div.appendChild(name);
             div.appendChild(text);
+            div.appendChild(del);
             list.appendChild(div);
         });
     });
