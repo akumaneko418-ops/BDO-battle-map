@@ -31,6 +31,7 @@ if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR);
 // ミドルウェア
 // ===============================
 app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
 
 // ===============================
@@ -217,13 +218,9 @@ app.get("/presetImage", (req, res) => {
 // Socket.IO（edit_state に統合）
 // ===============================
 io.on("connection", socket => {
-
-  // ★ 新エディタのリアルタイム同期（全状態を edit_state で扱う）
   socket.on("edit_state", s => {
-    console.log("edit_state received");
     socket.broadcast.emit("edit_state", s);
   });
-
 });
 
 // ===============================
@@ -232,6 +229,3 @@ io.on("connection", socket => {
 server.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
-
-+ app.use(express.json({ limit: "50mb" }));
-+ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
