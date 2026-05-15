@@ -234,8 +234,23 @@ function cancelTyping() {
         drawCanvas();
     }
 }
+let composing = false;
+
+document.addEventListener("compositionstart", () => {
+    composing = true;
+});
+
+document.addEventListener("compositionend", (e) => {
+    composing = false;
+    if (typing) {
+        typingText += e.data;
+        drawCanvas();
+        broadcastStateThrottled();
+    }
+});
 
 document.addEventListener("keydown", e => {
+    if (composing) return;
     if (!typing) return;
 
     if (e.key === "Enter") {
@@ -282,6 +297,7 @@ document.addEventListener("keydown", e => {
         e.preventDefault();
     }
 });
+
 
 /* ============================================================
    バウンディングボックス
