@@ -44,14 +44,20 @@ let history = [], redoHistory = [];
 
 function getCurrentState() {
     return {
-        markers: structuredClone(markers),
-        arrows: structuredClone(arrows),
-        texts: structuredClone(texts),
-        penPaths: structuredClone(penPaths),
-        backgroundImageSrc: backgroundImage ? canvas.toDataURL() : null,
-        markerComments: structuredClone(markerComments)
+        markers,
+        arrows,
+        texts,
+        penPaths,
+        selectedObject: selectedObject ? {
+            type: selectedType,
+            id: selectedObject.id
+        } : null,
+        zoom,
+        offsetX,
+        offsetY
     };
 }
+
 
 function restoreState(s) {
     markers = s.markers || [];
