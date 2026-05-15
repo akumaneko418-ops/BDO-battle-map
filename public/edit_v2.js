@@ -221,7 +221,6 @@ function getCanvasClickPosition(e) {
         y: (rawY - cy) / zoom + cy
     };
 }
-
 /* ============================================================
    テキスト入力（IME完全対応版）
 ============================================================ */
@@ -262,7 +261,53 @@ document.addEventListener("keydown", e => {
     if (composing) return;
 
     /* Enter → 確定 */
+    if (e.key === "Enter") {
+        if (typingText.trim()) {
+            saveHistory();
+            texts.push({
+                id: "text_" + Date.now(),
+                x: typingX,
+                y: typingY,
+                text: typingText,
+                color: currentTextColor,
+                size: currentTextSize,
+                angle: 0
+            });
+            broadcastState();
+        }
+        typing = false;
+        typingText = "";
+        drawCanvas();
+        e.preventDefault();
+        return;
+    }
 
+    /* Esc → キャンセル */
+    if (e.key === "Escape") {
+        typing = false;
+        typingText = "";
+        drawCanvas();
+        e.preventDefault();
+        return;
+    }
+
+    /* Backspace（IME中は無視） */
+    if (e.key === "Backspace") {
+        typingText = typingText.slice(0, -1);
+        drawCanvas();
+        broadcastStateThrottled();
+        e.preventDefault();
+        return;
+    }
+
+    /* 通常の1文字入力（英数字・記号など） */
+    if (e.key.length === 1) {
+        typingText += e.key;
+        drawCanvas();
+        broadcastStateThrottled();
+        e.preventDefault();
+    }
+});
 
 /* ============================================================
    バウンディングボックス
