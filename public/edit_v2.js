@@ -52,7 +52,7 @@ function getCurrentState() {
         offsetX,
         offsetY,
         markerComments
-        // ★ backgroundImage は保存しない（Undo で消えないように）
+        // backgroundImage は保存しない（Undo で消えないように）
     };
 }
 
@@ -66,7 +66,6 @@ function restoreState(s) {
     offsetX = s.offsetX || 0;
     offsetY = s.offsetY || 0;
 
-    // ★ 背景画像は維持する（Undo で消えない）
     drawCanvas();
     updateCommentList();
 }
@@ -215,44 +214,33 @@ function getCanvasClickPosition(e) {
         y: (rawY - cy) / zoom + cy
     };
 }
+
 /* ============================================================
-   テキスト入力（IME完全対応版）
+   IME 用透明 input
 ============================================================ */
+const hiddenInput = document.getElementById("hiddenTextInput");
+
 let typing = false, typingText = "", typingX = 0, typingY = 0;
 
-/* 入力キャンセル */
 function cancelTyping() {
-    if (typing) {
-        typing = false;
-        typingText = "";
-        drawCanvas();
-    }
+    typing = false;
+    typingText = "";
+    hiddenInput.value = "";
+    hiddenInput.blur();
+    drawCanvas();
 }
 
-/* IME 状態管理 */
-let composing = false;
-
-/* IME開始 */
-document.addEventListener("compositionstart", () => {
-    composing = true;
+/* input → typingText に反映 */
+hiddenInput.addEventListener("input", () => {
+    typingText = hiddenInput.value;
+    drawCanvas();
 });
 
-/* IME確定（日本語・絵文字など） */
-document.addEventListener("compositionend", (e) => {
-    composing = false;
-    if (typing) {
-        typingText += e.data;
-        drawCanvas();
-        broadcastStateThrottled();
-    }
-});
-
-/* キー入力 */
-document.addEventListener("keydown", e => {
-    if (!typing) return;
-    if (composing) return;
-
+/* Enter で確定 */
+hiddenInput.addEventListener("keydown", e => {
     if (e.key === "Enter") {
+        e.preventDefault();
+
         if (typingText.trim()) {
             saveHistory();
             texts.push({
@@ -266,88 +254,13 @@ document.addEventListener("keydown", e => {
             });
             broadcastState();
         }
-        typing = false;
-        typingText = "";
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
 
-    if (e.key === "Escape") {
-        typing = false;
-        typingText = "";
-        drawCanvas();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key === "Backspace") {
-        typingText = typingText.slice(0, -1);
-        drawCanvas();
-        broadcastStateThrottled();
-        e.preventDefault();
-        return;
-    }
-
-    if (e.key.length === 1) {
-        typingText += e.key;
-        drawCanvas();
-        broadcastStateThrottled();
-        e.preventDefault();
+        cancelTyping();
     }
 });
 
 /* ============================================================
-   バウンディングボックス
-============================================================ */
-function getBoundingBox(obj, type) {
-    if (type === "arrow") {
-        const s = 25 * (obj.scale || 1);
-        return { x: obj.x - s, y: obj.y - s, w: s * 2, h: s * 2 };
-    }
-
-    if (type === "text") {
-        ctx.save();
-        ctx.font = `700 ${obj.size}px "Noto Sans JP","Yu Gothic",sans-serif`;
-        const w = ctx.measureText(obj.text).width;
-        ctx.restore();
-        return { x: obj.x, y: obj.y - obj.size, w, h: obj.size };
-    }
-
-    if (type === "marker") {
-        const r = obj.size || 10;
-        return { x: obj.x - r, y: obj.y - r, w: r * 2, h: r * 2 };
-    }
-
-    return { x: 0, y: 0, w: 0, h: 0 };
-}
-
-function drawTransformHandles(obj, type) {
-    const b = getBoundingBox(obj, type);
-
-    ctx.save();
-    ctx.strokeStyle = "#4da3ff";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(b.x, b.y, b.w, b.h);
-
-    const size = 8;
-    [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]].forEach(([hx, hy]) => {
-        ctx.fillStyle = "#4da3ff";
-        ctx.fillRect(hx - size / 2, hy - size / 2, size, size);
-    });
-
-    const rx = b.x + b.w / 2;
-    const ry = b.y - 20;
-    ctx.beginPath();
-    ctx.arc(rx, ry, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "#4da3ff";
-    ctx.fill();
-
-    ctx.restore();
-}
-
-/* ============================================================
-   クリック処理（テキスト入力開始はここで行う）
+   クリック処理（テキスト入力開始）
 ============================================================ */
 canvas.addEventListener("click", e => {
     const { x, y } = getCanvasClickPosition(e);
@@ -357,12 +270,17 @@ canvas.addEventListener("click", e => {
         typingText = "";
         typingX = x;
         typingY = y;
-        selectedObject = null;
-        selectedType = null;
+
+        hiddenInput.style.left = e.clientX + "px";
+        hiddenInput.style.top = e.clientY + "px";
+        hiddenInput.value = "";
+        hiddenInput.focus();
+
         drawCanvas();
-        broadcastState();
         return;
     }
+
+    /* --- 以下は元のオブジェクト選択処理 --- */
 
     const hitArrow = hitTestArrow(x, y);
     const hitText = texts.find(t => {
@@ -455,7 +373,7 @@ function hitTestArrow(x, y) {
 }
 
 /* ============================================================
-   mousedown（完全修正版）
+   mousedown（修正版）
 ============================================================ */
 let drawing = false;
 
@@ -577,8 +495,9 @@ canvas.addEventListener("mousedown", e => {
         return;
     }
 });
+
 /* ============================================================
-   mousemove（変形・ドラッグ・パン）
+   mousemove
 ============================================================ */
 canvas.addEventListener("mousemove", e => {
     const { x, y } = getCanvasClickPosition(e);
@@ -675,6 +594,10 @@ canvas.addEventListener("mouseup", () => {
    ズーム
 ============================================================ */
 document.getElementById("zoomInBtn").onclick = () => {
+/* ============================================================
+   ズーム
+============================================================ */
+document.getElementById("zoomInBtn").onclick = () => {
     cancelTyping();
     selectedObject = null;
     selectedType = null;
@@ -731,6 +654,7 @@ function drawCanvas() {
 
     if (backgroundImage) ctx.drawImage(backgroundImage, 0, 0);
 
+    /* ペン */
     penPaths.forEach(p => {
         ctx.save();
         ctx.strokeStyle = p.color;
@@ -744,6 +668,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* マーカー */
     markers.forEach(m => {
         ctx.save();
         ctx.globalAlpha = m.opacity;
@@ -758,6 +683,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* マーカー強調 */
     if (highlightedMarkerId) {
         const m = markers.find(mm => mm.id === highlightedMarkerId);
         if (m) {
@@ -771,6 +697,7 @@ function drawCanvas() {
         }
     }
 
+    /* 矢印 */
     arrows.forEach(a => {
         ctx.save();
         ctx.translate(a.x, a.y);
@@ -793,6 +720,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* テキスト */
     texts.forEach(t => {
         ctx.save();
         ctx.translate(t.x, t.y);
@@ -810,6 +738,7 @@ function drawCanvas() {
         ctx.restore();
     });
 
+    /* 入力中テキスト（IME input の内容） */
     if (typing) {
         ctx.save();
         ctx.font = `700 ${currentTextSize}px "Noto Sans JP","Yu Gothic",sans-serif`;
